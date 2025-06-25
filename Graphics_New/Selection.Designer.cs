@@ -28,29 +28,37 @@
         /// </summary>
         private void InitializeComponent()
         {
-            treeView_Run = new TreeView();
+            tlp_Selection = new TableLayoutPanel();
             SuspendLayout();
             // 
-            // treeView_Run
+            // tlp_Selection
             // 
-            treeView_Run.Location = new Point(12, 12);
-            treeView_Run.Name = "treeView_Run";
-            treeView_Run.Size = new Size(346, 533);
-            treeView_Run.TabIndex = 0;
+            tlp_Selection.ColumnCount = 2;
+            tlp_Selection.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tlp_Selection.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tlp_Selection.Dock = DockStyle.Fill;
+            tlp_Selection.Location = new Point(0, 0);
+            tlp_Selection.Name = "tlp_Selection";
+            tlp_Selection.RowCount = 2;
+            tlp_Selection.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            tlp_Selection.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            tlp_Selection.Size = new Size(1247, 727);
+            tlp_Selection.TabIndex = 0;
             // 
             // Selection
             // 
-            AutoScaleDimensions = new SizeF(13F, 32F);
+            AutoScaleDimensions = new SizeF(15F, 33F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1081, 705);
-            Controls.Add(treeView_Run);
+            ClientSize = new Size(1247, 727);
+            Controls.Add(tlp_Selection);
+            Font = new Font("Roboto", 10.125F, FontStyle.Regular, GraphicsUnit.Point, 0);
             Name = "Selection";
-            Text = "Form1";
+            Text = "Selection";
             ResumeLayout(false);
         }
 
         #endregion
 
-        public TreeView treeView_Run;
+        public TableLayoutPanel tlp_Selection;
     }
 }
