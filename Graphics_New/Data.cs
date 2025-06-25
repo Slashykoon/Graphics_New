@@ -14,6 +14,14 @@ namespace Graphics_New
         private static int _currentRecord = 0;
         public static Dictionary<int, Run> dRuns = new Dictionary<int, Run>();
 
+        public static string BinSaveFilePath
+        {
+            get => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "datas.bin");
+            set
+            {
+            }
+        }
+        
         // Define the event for property changes
         public static event EventHandler<PropertyChangedEventArgs> PropertyChanged;
 
@@ -23,11 +31,8 @@ namespace Graphics_New
             get => _currentRun;
             set
             {
-                if (_currentRun != value)
-                {
-                    _currentRun = value;
-                    OnPropertyChanged(nameof(CurrentRun));
-                }
+                _currentRun = value;
+                OnPropertyChanged(nameof(CurrentRun));
             }
         }
 
@@ -36,11 +41,8 @@ namespace Graphics_New
             get => _currentRecord;
             set
             {
-                if (_currentRecord != value)
-                {
-                    _currentRecord = value;
-                    OnPropertyChanged(nameof(CurrentRecord));
-                }
+                _currentRecord = value;
+                OnPropertyChanged(nameof(CurrentRecord));
             }
         }
 
@@ -80,6 +82,7 @@ namespace Graphics_New
                 
                 if (!dRuns.ContainsKey(index.Value))
                 {
+                    RuntoAdd.RunNumber = index.Value;
                     dRuns[index.Value] = RuntoAdd;
                 }
             }
@@ -90,7 +93,10 @@ namespace Graphics_New
             }
         }
 
-        //todo : LoadNewRun() avec CurrentRun recupéré de la base sqlite
+        //todo : LoadRunRec(RunNumber,RecNumber) : function load data of run and record in druns
+
+
+
 
     }
 }

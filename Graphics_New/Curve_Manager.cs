@@ -11,6 +11,8 @@ using Microsoft.VisualBasic.Devices;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using static Graphics_New.CurveDetail;
 using System.Windows.Forms.VisualStyles;
+using static OpenTK.Graphics.OpenGL.GL;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Graphics_New
 {
@@ -19,17 +21,22 @@ namespace Graphics_New
         private bool isRunning = false;
         private Thread refreshThread;
         private object plotLock = new object();
+        private object tlpLock = new object();
 
-      
 
         // Create FormsPlot
         ScottPlot.WinForms.FormsPlot formsPlot = new ScottPlot.WinForms.FormsPlot
         {
             Dock = DockStyle.Fill
+
         };
+
+        //AxisManager axisManager;
         public Curve_Manager()
         {
             InitFormPlot();
+            // Get the AxisManager instance from ScottPlot  
+            //var axisManager = formsPlot.Plot.Axes;
         }
         private void CurveDetail_CurveColorChanged(object sender, CurveCheckedEventArgs e)
         {
@@ -40,9 +47,25 @@ namespace Graphics_New
         {
             // Handle the event
             Tools.LogToFile($"Curve: {e.CurveName}, Checked: {e.IsChecked}, Color: {e.CurveColor}");
-          
+            foreach (Run run in Data.dRuns.Values)
+            {
+                foreach (Record rec in run.dRecords.Values)
+                {
+                    foreach (Signal sig in rec.Signals)
+                    {
+                        if (sig.Name == e.CurveName)
+                        {
+                            sig.CurveLogger.IsVisible = e.IsChecked;
+                            if (sig.CurveLogger.Axes.YAxis != null)
+                            {
+                                sig.CurveLogger.Axes.YAxis.IsVisible = e.IsChecked;
+                            }
+                        }
+                    }
+                }
+            }
 
-            foreach (Signal sig in Data.GetRecord(Data.CurrentRun, Data.CurrentRecord).GetSignals())
+            /*foreach (Signal sig in Data.GetRecord(Data.CurrentRun, Data.CurrentRecord).GetSignals())
             {
                 if (sig.Name == e.CurveName)
                 {
@@ -52,7 +75,7 @@ namespace Graphics_New
                         sig.CurveLogger.Axes.YAxis.IsVisible = e.IsChecked;
                     }
                 }
-            }
+            }*/
                     // Perform action when checked (e.g., enable plotting)
                     // MessageBox.Show($"Curve {e.CurveName} is now checked with color {e.CurveColor}");
         }
@@ -65,45 +88,72 @@ namespace Graphics_New
         {
             foreach (Signal sig in Data.GetRecord(Data.CurrentRun, Data.CurrentRecord).GetSignals())
             {
-                //I want here to attach sig.CurveLogger to formsplot 
                sig.CurveLogger= formsPlot.Plot.Add.DataLogger();
             }
             Configure_Axes();
-            ApplyScaleThight();
+ 
+        }
+        public void Construct_Axes()
+        {
+
+            foreach (Signal sig in Data.GetRecord(Data.CurrentRun, Data.CurrentRecord).GetSignals())
+            {
+                sig.YAxis.Label.Text = sig.Name;
+                sig.YAxis.Label.ForeColor = sig.Convert_SysColToScottCol(sig.Col);
+                sig.YAxis.IsVisible = true;
+
+            }
         }
 
 
         public void Configure_Axes()
         {
-            // Ensure at least one left and one right axis as defaults (optional)
-            var defaultLeftAxis = formsPlot.Plot.Axes.Left;
-            var defaultRightAxis = formsPlot.Plot.Axes.Right;
-            formsPlot.Plot.Axes.Remove(defaultLeftAxis);
-            formsPlot.Plot.Axes.Remove(defaultRightAxis);
-            foreach (Signal sig in Data.GetRecord(Data.CurrentRun, Data.CurrentRecord).GetSignals())
+            lock (formsPlot.Plot.Sync)
             {
-                if(sig.IsDetector)
-                {
-                    sig.YAxis = formsPlot.Plot.Axes.AddLeftAxis();
-                    sig.CurveLogger.Axes.YAxis = sig.YAxis;
-                    sig.YAxis.Label.Text = sig.Name;
-                    sig.YAxis.Label.ForeColor = sig.Convert_SysColToScottCol(sig.Col);
-                    sig.YAxis.IsVisible = true;
+                var plot = formsPlot.Plot;
+                var axisManager = plot.Axes;
+                bool GroupByUnit = false;
+                // Optional: Clear existing custom axes
+                foreach (var axis in axisManager.GetYAxes().ToList())
+                    axisManager.Remove(axis);
 
-                }
-                else
+                // Group signals
+                Dictionary<string, IYAxis> sharedAxes = new();
+              
+
+                //var signals = Data.GetRecord(Data.CurrentRun, Data.CurrentRecord).GetSignals();
+                foreach (Run run in Data.dRuns.Values)
                 {
-                    sig.YAxis = formsPlot.Plot.Axes.AddRightAxis();
-                    sig.CurveLogger.Axes.YAxis = sig.YAxis;
-               
-                    sig.YAxis.Label.Text = sig.Name;
-                    sig.YAxis.Label.ForeColor = sig.Convert_SysColToScottCol(sig.Col);
-                    sig.YAxis.IsVisible = false;
+                    foreach (Record rec in run.dRecords.Values)
+                    {
+                        foreach (Signal sig in rec.Signals)
+                        {
+                            if (!sharedAxes.ContainsKey(sig.Unit))
+                            {
+                                IYAxis yAxis;
+                                if (sig.IsDetector)
+                                    yAxis = axisManager.AddLeftAxis();
+                                else
+                                    yAxis = axisManager.AddRightAxis();
+
+                                yAxis.Label.Text = sig.Name + "(" + sig.Unit + ")";
+                                //yAxis.Label.ForeColor = sig.Convert_SysColToScottCol(sig.Col);
+                                yAxis.IsVisible = true;
+
+                                sharedAxes[sig.Unit] = yAxis;
+                            }
+
+                            // Reuse axis for this signal
+                            sig.YAxis = sharedAxes[sig.Unit];
+                            sig.CurveLogger.Axes.YAxis = sig.YAxis;
+                        }
+                    }
                 }
+                axisManager.AutoScaleExpand();
+                
             }
-            // Refresh the plot to render the new axes
-            //formsPlot.Refresh();
         }
+
 
         private void ApplyManualScale()
         {
@@ -111,27 +161,17 @@ namespace Graphics_New
             {
                 formsPlot.Plot.Axes.SetLimits(0, 50, -20, 20, formsPlot.Plot.Axes.Bottom, sig.YAxis);
             }
-            //formsPlot.Plot.Axes.SetLimits(0, 50, -20_000, 20_000, formsPlot.Plot.Axes.Bottom, YAxis2);
-            formsPlot.Refresh();
         }
 
-        private void ApplyAutoscale()
-        {
-            formsPlot.Plot.Axes.Margins();
-            formsPlot.Plot.Axes.AutoScale();
-            formsPlot.Refresh();
-        }
 
         private void ApplyScaleThight()
         {
-            //formsPlot.Plot.Axes.Margins(0, 0);
-            //formsPlot.Refresh();
+            formsPlot.Plot.Axes.Margins(0, 0);
         }
 
         private void ApplyAutoScaleWithMargin()
         {
             formsPlot.Plot.Axes.Margins(1, 1);
-            formsPlot.Refresh();
         }
 
 
@@ -154,21 +194,24 @@ namespace Graphics_New
         {
             while (isRunning)
             {
-                lock (plotLock)
-                {
-                    // Use Invoke to update UI on the correct thread
+
+                    // Use Invoke to update UI on the correct threa
                     if (formsPlot.InvokeRequired)
                     {
                         formsPlot.Invoke((MethodInvoker)delegate
                         {
-                            formsPlot.Refresh();
+                            lock (plotLock)
+                            {
+                                if (formsPlot != null)
+                                    formsPlot.Refresh();
+                            }
                         });
                     }
                     else
                     {
                         formsPlot.Refresh();
                     }
-                }
+           
                 Thread.Sleep(300);
             }
         }
@@ -184,9 +227,19 @@ namespace Graphics_New
 
         public void RefreshCurveSelector(TableLayoutPanel tlp_CurveDetails)
         {
-            foreach (Signal sig in Data.GetRecord(Data.CurrentRun, Data.CurrentRecord).GetSignals())
+            lock (tlpLock)
             {
-                FillCurveDetails(sig.Name, sig.GetFormatColor(), tlp_CurveDetails);
+                if (tlp_CurveDetails.InvokeRequired)
+                {
+                    tlp_CurveDetails.Invoke((MethodInvoker)delegate
+                    {
+                        foreach (Signal sig in Data.GetRecord(Data.CurrentRun, Data.CurrentRecord).GetSignals())
+                        {
+                            FillCurveDetails(sig.Name, sig.GetFormatColor(), tlp_CurveDetails);
+                        }
+
+                    });
+                }
             }
         }
 

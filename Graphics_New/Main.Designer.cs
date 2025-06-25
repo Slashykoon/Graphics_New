@@ -34,6 +34,7 @@
             tlp_CurveDetails = new TableLayoutPanel();
             tlp_Information = new TableLayoutPanel();
             lbl_infos = new Label();
+            button1 = new Button();
             timer1 = new System.Windows.Forms.Timer(components);
             notifyIcon1 = new NotifyIcon(components);
             tlp_global.SuspendLayout();
@@ -47,6 +48,7 @@
             tlp_global.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             tlp_global.Controls.Add(tlp_MainGraphic, 0, 1);
             tlp_global.Controls.Add(tlp_Information, 0, 2);
+            tlp_global.Controls.Add(button1, 0, 0);
             tlp_global.Dock = DockStyle.Fill;
             tlp_global.Location = new Point(0, 0);
             tlp_global.Name = "tlp_global";
@@ -111,6 +113,16 @@
             lbl_infos.Text = "Information";
             lbl_infos.TextAlign = ContentAlignment.MiddleLeft;
             // 
+            // button1
+            // 
+            button1.Location = new Point(3, 3);
+            button1.Name = "button1";
+            button1.Size = new Size(128, 49);
+            button1.TabIndex = 2;
+            button1.Text = "Selection";
+            button1.UseVisualStyleBackColor = true;
+            button1.Click += button1_Click;
+            // 
             // notifyIcon1
             // 
             notifyIcon1.Text = "notifyIcon1";
@@ -141,5 +153,6 @@
         public TableLayoutPanel tlp_MainGraphic;
         public TableLayoutPanel tlp_Information;
         private NotifyIcon notifyIcon1;
+        private Button button1;
     }
 }

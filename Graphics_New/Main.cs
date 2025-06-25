@@ -2,11 +2,15 @@ using ScottPlot;
 using ScottPlot.AxisPanels;
 using ScottPlot.Plottables;
 using Snap7;
+using System.ComponentModel;
+using System.Data.Common;
+using System.Drawing.Text;
 using System.Reflection;
 using System.Threading;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using static OpenTK.Graphics.OpenGL.GL;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 
 
@@ -14,11 +18,11 @@ namespace Graphics_New
 {
     public partial class Main : Form
     {
- 
+
         PLCInterface plc;
         Curve_Manager Cvm;
 
-
+        System.Windows.Forms.Label LabelInfo_CurrRunRec;
         public Main()
         {
             InitializeComponent();
@@ -30,10 +34,10 @@ namespace Graphics_New
                 Visible = true
             };
 
-            System.Windows.Forms.Label LabelInfo_CurrRunRec = new System.Windows.Forms.Label
+            LabelInfo_CurrRunRec = new System.Windows.Forms.Label
             {
                 Text = "Running Run : ?? Record : ??", // Set the text to display
-                Dock= DockStyle.Fill,
+                Dock = DockStyle.Fill,
                 Font = new Font("Roboto", 10), // Set font and size
                 Visible = true // Ensure the label is visible
             };
@@ -46,32 +50,53 @@ namespace Graphics_New
 
             plc.OnNewRecord += () =>
             {
+                if (Data.CurrentRecord > 1)
+                {
+                    SQLite.UpdateRecordDataInSQLite(Data.dRuns[Data.CurrentRun].dRecords[Data.CurrentRecord - 1].Pk_Record, Data.BinSaveFilePath);
+
+                    // var tmp = SQLite.ReadRecordDataFromSQLite(153);
+
+                    //plc.AppendAllPLCDataToSignals(tmp,
+                }
+
                 plc.NewRecordTriggered = !Data.dRuns[Data.CurrentRun].AttachNewRecord();
-                
+                Cvm.RefreshCurveSelector(tlp_CurveDetails);
+                Cvm.AttachCurves();
+
+
             };
 
             Data.PropertyChanged += (sender, e) =>
             {
-                if (e.PropertyName == nameof(Data.CurrentRun))
+                // Ensure the call is made on the UI thread
+                if (lbl_infos.InvokeRequired)
                 {
-                    lbl_infos.Text = $"Current Run changed to {Data.CurrentRun}";
-                    LabelInfo_CurrRunRec.Text= $"Running Run {Data.CurrentRun} Record {Data.CurrentRecord}";
-                }
-                else if (e.PropertyName == nameof(Data.CurrentRecord))
-                {
-                    lbl_infos.Text = $"Current Record changed to {Data.CurrentRecord}";
-                    LabelInfo_CurrRunRec.Text = $"Running Run {Data.CurrentRun} Record {Data.CurrentRecord}";
-                }
+                    Data.PropertyChanged += (sender, e) =>
+                    {
+                        // Vérifier si l'appel doit être marshalé sur le thread UI
+                        if (lbl_infos.InvokeRequired)
+                        {
+                            lbl_infos.BeginInvoke((System.Windows.Forms.MethodInvoker)delegate
+                            {
+                                HandlePropertyChange(sender, e);
+                            });
+                            return;
+                        }
+                        HandlePropertyChange(sender, e);
+                    };
+                };
+
+
             };
 
             Cvm.AttachFormPlot(tlp_MainGraphic);
-            Cvm.RefreshCurveSelector(tlp_CurveDetails);
-            Cvm.AttachCurves();
+
+            //Cvm.AttachCurves();
 
             Cvm.StartRefreshPlot();
 
-           tlp_Information.Controls.Add(LabelInfo_CurrRunRec,1,0);
-            
+            tlp_Information.Controls.Add(LabelInfo_CurrRunRec, 1, 0);
+
             //tlp_CurveDetails.Controls.Add(CurveDetail_Instance, 0, tlp_CurveDetails.RowCount - 1);
 
 
@@ -90,10 +115,32 @@ namespace Graphics_New
             formsPlot1.MouseMove += FormsPlot1_MouseMove;*/
 
         }
+
+        public void HandlePropertyChange(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(Data.CurrentRun))
+            {
+                lbl_infos.Text = $"Current Run changed to {Data.CurrentRun}";
+
+                LabelInfo_CurrRunRec.Text = $"Running Run {Data.CurrentRun} Record {Data.CurrentRecord}";
+            }
+            else if (e.PropertyName == nameof(Data.CurrentRecord))
+            {
+                lbl_infos.Text = $"Current Record changed to {Data.CurrentRecord}";
+                LabelInfo_CurrRunRec.Text = $"Running Run {Data.CurrentRun} Record {Data.CurrentRecord}";
+            }
+        }
+
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             Cvm.CloseThread();
             //plc.StopReadingLoop();
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            Selection selectionForm = new Selection();
+            selectionForm.ShowDialog();
         }
 
 

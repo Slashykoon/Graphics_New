@@ -21,6 +21,7 @@ namespace Graphics_New
             CurveLogger = new DataLogger();
             //CurveLogger.ViewSlide(100);
             //CurveLogger.ViewJump(100);
+           
         }
 
      

@@ -21,7 +21,7 @@ namespace Graphics_New
             foreach (XElement tab in Parameters.Root.Elements("Signals").Elements())
             {
                 //Signal sig = new Signal(int.Parse(tab.Attribute("index")?.Value),tab.Attribute("name")?.Value, tab.Attribute("color")?.Value, false);
-                rec.AddSignal(int.Parse(tab.Attribute("index")?.Value), tab.Attribute("name")?.Value, tab.Attribute("color")?.Value, bool.Parse(tab.Attribute("isdetector")?.Value));
+                rec.AddSignal(int.Parse(tab.Attribute("index")?.Value), tab.Attribute("name")?.Value, tab.Attribute("color")?.Value, bool.Parse(tab.Attribute("isdetector")?.Value), tab.Attribute("unit")?.Value);
             }
 
             return rec;

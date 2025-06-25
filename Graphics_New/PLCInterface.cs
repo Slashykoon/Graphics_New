@@ -70,6 +70,10 @@ namespace Graphics_New
         public event Action OnNewRecord;
         public int lastIdxofArrayCopied = 0;
         public bool bRecordData = false;
+        private int lastNewRecordIndex = -1;
+        string exeDirectory;
+        string filePath;
+
         public bool NewRecordTriggered
         {
             get => _NewRecordTriggered;
@@ -88,11 +92,17 @@ namespace Graphics_New
         public bool StartReadingLoop(string ip = "192.168.0.1", int rack = 0, int slot = 1)
         {
             int result = client.ConnectTo(ip, rack, slot);
+
+            short Timeout = 5000;
+
+            client.SetParam(S7Consts.p_i32_RecvTimeout, ref Timeout);
+
             if (result != 0)
             {
                 Tools.LogToFile("Connection failed: " + client.ErrorText(result));
                 return false;
             }
+
 
             isRunning = true;
             readThread = new Thread(ReadLoop)
@@ -177,12 +187,12 @@ namespace Graphics_New
 
         private GraphicsDB ParseGraphicsDB(byte[] buffer)
         {
-
-
             // Get the directory where the executable is located
-            string exeDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            exeDirectory = AppDomain.CurrentDomain.BaseDirectory;
             // Combine the executable directory with the log file name
-            string filePath = Path.Combine(exeDirectory, "datas.bin");
+            filePath = Path.Combine(exeDirectory, "datas.bin");
+
+
 
             //parsing du buffer de données 
             db.spare0 = BitConverter.ToInt16(buffer, 0);
@@ -221,7 +231,7 @@ namespace Graphics_New
             for (int i = 1; i <= db.kMaxValueIndex; i++)
             {
                 byte[] bytes = BitConverter.GetBytes(db.ValuesDint[((i - 1) * (db.kCurrentSignalNb+1))]);
-                Tools.LogToFile("Bytes de code fonction : " + bytes[3] + " " + bytes[2] + " " + bytes[1] + " "  + bytes[0] );
+                //Tools.LogToFile("Bytes de code fonction : " + bytes[3] + " " + bytes[2] + " " + bytes[1] + " "  + bytes[0] );
                 CheckCode(bytes,i);
             }
             if (bRecordData)
@@ -239,13 +249,13 @@ namespace Graphics_New
                             tmp.Add(db.Values[(i + (i - 1) * db.kCurrentSignalNb) + j]);
                         }
 
-                        LogValues(tmp);
+                        //LogValues(tmp);
 
                         db.ArrByteFormatted.Add(Curr_idx, tmp);
                         Curr_idx++;
 
                         AppendToBinaryFile(filePath, db.ArrByteFormatted);
-                        AppendAllPLCDataToSignals(); //test
+                        AppendPLCDataToSignals(); //test
                     }
                     Old_idx = db.iWRITEINDEX;
                 }
@@ -259,17 +269,16 @@ namespace Graphics_New
                         for (int j = 1; j <= db.kCurrentSignalNb; j++)
                         {
                             tmp.Add(db.Values[(i + (i - 1) * db.kCurrentSignalNb) + j]);
-
                         }
 
-                        LogValues(tmp);
+                        //LogValues(tmp);
 
                         db.ArrByteFormatted.Add(Curr_idx, tmp);
                         Curr_idx++;
 
 
                         AppendToBinaryFile(filePath, db.ArrByteFormatted);
-                        AppendAllPLCDataToSignals(); //test
+                        AppendPLCDataToSignals(); //test
                     }
                     Old_idx = 0; // voir si mieux possible recup autre donnee
                 }
@@ -279,7 +288,7 @@ namespace Graphics_New
         }
 
 
-        public void AppendAllPLCDataToSignals()
+        public void AppendPLCDataToSignals()
         {
             if (db == null || db.ArrByteFormatted.Count == 0)
                 return;
@@ -301,8 +310,30 @@ namespace Graphics_New
             }
             lastIdxofArrayCopied = newCount;
         }
-            
 
+        public void AppendAllPLCDataToSignals(Dictionary<int, List<Single>> dictAllDataLoaded,int RunLoaded, int RecLoaded)
+        {
+            if (dictAllDataLoaded.Count == 0)
+                return;
+            Data.AddNewRun(RunLoaded);
+            Data.dRuns[RunLoaded].AttachNewRecord(RecLoaded);
+            List<Signal> signals = Data.GetSignals(RunLoaded, RecLoaded);
+            int newCount = dictAllDataLoaded.Count;
+
+            for (int i = 0; i < newCount; i++)
+            {
+                List<Single> newValues = dictAllDataLoaded[i];
+                for (int j = 0; j < signals.Count; j++)
+                {
+                    Signal s = signals[j];
+
+                    //s.YPoints.Add(newValues[j]);
+                    //s.XPoints.Add((i*500.0f)/1000.0f);
+                    s.CurveLogger.Add((i * 500.0f) / 1000.0f, newValues[j]);
+                }
+            }
+           
+        }
 
 
         void AppendToBinaryFile(string path, Dictionary<int, List<Single>> newData)
@@ -346,16 +377,23 @@ namespace Graphics_New
             return result;
         }
 
+
+
         public void CheckCode(byte[] b,int idx)
         {
-            if ((b[0] & (byte)PLCBufferCode.NewRecord) != 0)
+            if ((b[0] & (byte)PLCBufferCode.NewRecord) != 0 && idx != lastNewRecordIndex)
             {
-                Tools.LogToFile("*** Nouveau record ! *** ");
-                //Old_idx=idx;
+                Tools.LogToFile("*** Nouveau record ! *** " + idx.ToString());
+                lastNewRecordIndex = idx; // Mark this index as processed
+
+                db.ArrByteFormatted.Clear();
+                Curr_idx = 0;
+
                 bRecordData = true;
                 NewRecordTriggered = true;
                 
             }
+
             if ((b[0] & (byte)PLCBufferCode.NewCollector) != 0)
             {
                 Tools.LogToFile("*** Nouvelle collection ! *** ");
@@ -378,9 +416,6 @@ namespace Graphics_New
             }
             Tools.LogToFile("Valeurs : " + tempstr);
         }
-        public Dictionary<int, List<Single>> GetDictValues()
-        {
-            return db.ArrByteFormatted;
-        }
+
     }
 }

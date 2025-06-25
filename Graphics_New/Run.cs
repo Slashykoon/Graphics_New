@@ -17,12 +17,21 @@ namespace Graphics_New
 
         public int RunNumber = 0;
 
-        public bool AttachNewRecord()
+        public bool AttachNewRecord(int? index = null)
         {
             try
             {
-                dRecords[SQLite.GetLastRecordOfRun(RunNumber) + 1] = new Record(RunNumber);
+                if (index.HasValue) // Un numéro est donné, on devine qu'on charge un record
+                {
+                    dRecords[index.Value] = new Record(index.Value);
+                }
+                else
+                {
+                    dRecords[SQLite.GetLastRecordOfRun(RunNumber) + 1] = new Record(null, RunNumber);
+                }
+                    
                 return true; 
+
             }
             catch (Exception)
             {
@@ -36,7 +45,7 @@ namespace Graphics_New
             dRecords = new Dictionary<int, Record>();
             RunNumber = SQLite.GetLastRunNumber() + 1;
             SQLite.InsertRun(RunNumber, "No description set");
-            AttachNewRecord();
+            
         }
     }
 }

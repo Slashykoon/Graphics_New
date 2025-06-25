@@ -57,6 +57,7 @@ namespace Graphics_New
                     Fk_Run INTEGER,
                     RecordNumber INTEGER, 
                     RecordDescription TEXT,
+                    RecordData BLOB,
                     FOREIGN KEY (Fk_Run) REFERENCES Runs(Pk_Run) ON DELETE CASCADE
                 );
                 ";
@@ -206,6 +207,93 @@ namespace Graphics_New
 
             var result = command.ExecuteScalar();
             return result != null && result != DBNull.Value ? Convert.ToInt32(result) : 0; // Returns 0 if no records exist for the run
+        }
+
+
+        public static void UpdateRecordDataInSQLite(long pkRecord, string filePath)
+        {
+            // Read the binary file into a byte array
+            byte[] recordData = File.ReadAllBytes(filePath);
+
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+
+            using var command = new SqliteCommand(
+                "UPDATE Records SET RecordData = @RecordData WHERE Pk_Record = @PkRecord",
+                connection);
+
+            // Add parameters
+            command.Parameters.AddWithValue("@RecordData", recordData);
+            command.Parameters.AddWithValue("@PkRecord", pkRecord);
+
+            // Execute the query
+            int rowsAffected = command.ExecuteNonQuery();
+            if (rowsAffected == 0)
+            {
+                throw new Exception($"No record found with Pk_Record = {pkRecord}");
+            }
+        }
+
+        public static Dictionary<int, List<Single>> ReadRecordDataFromSQLite(long pkRecord)
+        {
+            // Read binary data from SQLite
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+
+            using var command = new SqliteCommand(
+                "SELECT RecordData FROM Records WHERE Pk_Record = @PkRecord",
+                connection);
+
+            command.Parameters.AddWithValue("@PkRecord", pkRecord);
+
+            using var reader = command.ExecuteReader();
+            if (!reader.Read())
+            {
+                throw new Exception($"No record found with Pk_Record = {pkRecord}");
+            }
+
+            if (reader.IsDBNull(0))
+            {
+                throw new Exception($"No binary data found for Pk_Record = {pkRecord}");
+            }
+
+            // Read binary data into a byte array
+            long dataLength = reader.GetBytes(0, 0, null, 0, 0);
+            byte[] buffer = new byte[dataLength];
+            reader.GetBytes(0, 0, buffer, 0, (int)dataLength);
+
+            // Parse binary data into Dictionary<int, List<Single>>
+            var result = new Dictionary<int, List<Single>>();
+            using var ms = new MemoryStream(buffer);
+            using var binaryReader = new BinaryReader(ms);
+
+            try
+            {
+                while (ms.Position < ms.Length)
+                {
+                    int key = binaryReader.ReadInt32();
+                    int count = binaryReader.ReadInt32();
+                    var list = new List<Single>(count);
+
+                    for (int i = 0; i < count; i++)
+                    {
+                        list.Add(binaryReader.ReadSingle());
+                    }
+
+                    if (!result.ContainsKey(key))
+                    {
+                        result[key] = new List<Single>();
+                    }
+
+                    result[key].AddRange(list);
+                }
+            }
+            catch (EndOfStreamException)
+            {
+                throw new Exception($"Invalid binary data format for Pk_Record = {pkRecord}");
+            }
+
+            return result;
         }
 
     }

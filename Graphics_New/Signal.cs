@@ -13,18 +13,7 @@ namespace Graphics_New
         private Color _Col;
 
         public ScottPlot.Color ScottCol { get ; set; }
-        private String _sColor = "0,0,0";
-
-        public String sColor
-        {
-            get => _sColor;
-            set
-            {
-                _sColor = value;
-               
-            }
-            
-        }
+        private String sColor = "0,0,0";
         public Color Col
         {
             get => _Col;
@@ -42,10 +31,10 @@ namespace Graphics_New
         public List<float> XPoints { get; set; } = new List<float>();
         public List<float> YPoints { get; set; } = new List<float>();
 
-        public Signal(int idx, string sName, string sColor, Boolean IsDetect) : base()
+        public Signal(int idx, string sName, string sColor, Boolean IsDetect, string unit) : base()
         {
             Name = sName;
-           
+            Unit = unit;
             if (sColor != null && sColor != string.Empty)
             {
                 this.sColor = sColor; // Color in RGB format as a string
