@@ -9,6 +9,7 @@ namespace Graphics_New
 {
     public class Record
     {
+        public string Name { get; set; }
         public string Description { get; set; }
         public DateTime CreationDate { get; set; }
         public DateTime EndDate { get; set; }
@@ -47,7 +48,7 @@ namespace Graphics_New
 
                 }
                 Data.CurrentRecord = RecordNumber;
-                Pk_Record = SQLite.InsertRecord(RunNumAttached.Value, RecordNumber, "No description set");
+                Pk_Record = SQLite.InsertRecord(RunNumAttached.Value, RecordNumber,"No Rec title" , "No description set");
             }
 
 

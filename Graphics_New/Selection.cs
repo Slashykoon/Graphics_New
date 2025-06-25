@@ -109,16 +109,13 @@ namespace Graphics_New
                 Tag = new { Id = 1 } // Placeholder for Run object
             };
 
-            // Add Record nodes (1 to 5) with document icon
-            for (int i = 1; i <= 15; i++)
+            foreach (var kvp in SQLite.GetAllRunsIdx_Name())
             {
-                TreeNode runNode = new TreeNode($"Run {i}")
+                TreeNode runNode = new TreeNode($"Run {kvp.Key} - " + kvp.Value)
                 {
-                    //ImageKey = "Run",
+                    ImageKey = "Runs",
                     SelectedImageKey = "Selected",
-                    //StateImageKey = "Selected",
-                   
-                    Tag = new { Id = i } // Placeholder for Record object
+                    Tag = new { Id = kvp.Key } // Placeholder for Run object
                 };
                 runsNode.Nodes.Add(runNode);
             }
@@ -130,51 +127,57 @@ namespace Graphics_New
             runsNode.Expand();
         }
 
-        private void PopulateTreeViewRecords()
+        private void PopulateTreeViewRecords(int? runNumber = null)
         {
             treeView2.Nodes.Clear();
 
-            // Create Run node with database icon
-            TreeNode recsNode = new TreeNode("List of saved Records")
+            TreeNode recsNode = new TreeNode($"Records for Run {(runNumber.HasValue ? runNumber.Value.ToString() : "")}")
             {
                 ImageKey = "Runs",
                 SelectedImageKey = "Runs",
-                Tag = new { Id = 1 } // Placeholder for Run object
-          
+                Tag = new { Id = runNumber }  // Don't force .Value — just store nullable
             };
 
-            // Add Record nodes (1 to 5) with document icon
-            for (int i = 1; i <= 10; i++)
+            if (runNumber.HasValue)
             {
-                TreeNode recNode = new TreeNode($"Record {i}")
+                var records = SQLite.GetAllRecordsOfRun(runNumber.Value); // Safe, we already checked HasValue
+
+                foreach (var kvp in records)
                 {
-                    //ImageKey = "Run",
-                    //SelectedImageKey = "Selected",
-                  
-                    //StateImageKey = "Selected",
-                    Tag = new { Id = i } // Placeholder for Record object
-                };
-                recsNode.Nodes.Add(recNode);
+                    TreeNode recNode = new TreeNode($"Record {kvp.Key} - {kvp.Value}")
+                    {
+                        Tag = new { Id = kvp.Key }
+                    };
+                    recsNode.Nodes.Add(recNode);
+                }
             }
 
-            // Add Run node to TreeView
             treeView2.Nodes.Add(recsNode);
-
-            // Expand Run node by default
             recsNode.Expand();
         }
+
 
 
         private void TreeView1_AfterSelect(object sender, TreeViewEventArgs e)
         {
             // Handle node selection
-            if (e.Node.Tag != null)
+            if (e.Node?.Tag != null)
             {
-                dynamic tag = e.Node.Tag;
-               
-                //add ico selected
-                //e.Node.ImageKey = "Selected";
-                //MessageBox.Show($"Selected: {e.Node.Text} (ID: {tag.Id})");
+                // Extract the ID from the Tag object
+                var tagObject = e.Node.Tag;
+                var tagType = tagObject.GetType();
+
+                // Use reflection to get the "Id" property (since it’s an anonymous type)
+                var idProperty = tagType.GetProperty("Id");
+                if (idProperty != null)
+                {
+                    var value = idProperty.GetValue(tagObject);
+                    if (value is int runNumber)
+                    {
+                   
+                        //PopulateTreeViewRecords(runNumber);
+                    }
+                }
             }
         }
         private void TreeView1_NodeMouseDoubleClick(object sender, TreeNodeMouseClickEventArgs e)
@@ -184,13 +187,23 @@ namespace Graphics_New
             {
                 ResetNodeStyle(node, treeView1);
             }
-            // Handle node selection
-            if (e.Node.Tag != null)
+            if (e.Node?.Tag != null)
             {
-                dynamic tag = e.Node.Tag;
-                //add ico selected
-                //e.Node.ImageKey = "Selected";
-                //MessageBox.Show($"Selected: {e.Node.Text} (ID: {tag.Id})");
+                // Extract the ID from the Tag object
+                var tagObject = e.Node.Tag;
+                var tagType = tagObject.GetType();
+
+                // Use reflection to get the "Id" property (since it’s an anonymous type)
+                var idProperty = tagType.GetProperty("Id");
+                if (idProperty != null)
+                {
+                    var value = idProperty.GetValue(tagObject);
+                    if (value is int runNumber)
+                    {
+
+                        PopulateTreeViewRecords(runNumber);
+                    }
+                }
             }
         }
         private void TreeView2_NodeMouseDoubleClick(object sender, TreeNodeMouseClickEventArgs e)
@@ -206,9 +219,7 @@ namespace Graphics_New
             {
                 dynamic tag = e.Node.Tag;
                 e.Node.SelectedImageKey = "Selected"; // Change selected image key
-                //add ico selected
-                //e.Node.ImageKey = "Selected";
-                //MessageBox.Show($"Selected: {e.Node.Text} (ID: {tag.Id})");
+
             }
         }
 

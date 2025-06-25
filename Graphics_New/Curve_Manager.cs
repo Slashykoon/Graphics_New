@@ -233,6 +233,10 @@ namespace Graphics_New
                 {
                     tlp_CurveDetails.Invoke((MethodInvoker)delegate
                     {
+                        tlp_CurveDetails.Controls.Clear();
+                        tlp_CurveDetails.RowStyles.Clear();
+                        tlp_CurveDetails.RowCount = 0;
+
                         foreach (Signal sig in Data.GetRecord(Data.CurrentRun, Data.CurrentRecord).GetSignals())
                         {
                             FillCurveDetails(sig.Name, sig.GetFormatColor(), tlp_CurveDetails);
@@ -249,20 +253,16 @@ namespace Graphics_New
             CurveDetail CurveDetail_Instance = new(CurveName, col)
             {
                 Margin = new(10, 10, 10, 10),
-                Dock = DockStyle.Fill
-
+                Dock = DockStyle.Fill,
+                Size = new Size(500, 80),
+                MaximumSize = new Size(1000, 80)
             };
 
-            CurveDetail_Instance.Size = new Size(500, 80); // Set desired size
-            CurveDetail_Instance.Margin = new Padding(5); // Add some spacing around the control
-            CurveDetail_Instance.MaximumSize = new Size(1000, 80); // Set maximum size to prevent stretching 
-
-            
+            // Increase the row count BEFORE adding the control
+            int rowIndex = tlp_CurveDetails.RowCount++;
             tlp_CurveDetails.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-           
-            // Add the user control to the new row (in the first column, index 0)
-            tlp_CurveDetails.Controls.Add(CurveDetail_Instance, 0, tlp_CurveDetails.RowCount - 1);
-            tlp_CurveDetails.RowCount++;
+
+            tlp_CurveDetails.Controls.Add(CurveDetail_Instance, 0, rowIndex);
 
             CurveDetail_Instance.CurveCheckedChanged += CurveDetail_CurveCheckedChanged;
             CurveDetail_Instance.CurveColorChanged += CurveDetail_CurveColorChanged;

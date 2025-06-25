@@ -44,7 +44,7 @@ namespace Graphics_New
         {
             dRecords = new Dictionary<int, Record>();
             RunNumber = SQLite.GetLastRunNumber() + 1;
-            SQLite.InsertRun(RunNumber, "No description set");
+            SQLite.InsertRun(RunNumber,"No title", "No description set");
             
         }
     }

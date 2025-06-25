@@ -37,8 +37,9 @@ namespace Graphics_New
 
                 -- Runs table
                 CREATE TABLE IF NOT EXISTS Runs( 
-                    Pk_Run INTEGER PRIMARY KEY AUTOINCREMENT, 
+                    Pk_Run INTEGER PRIMARY KEY AUTOINCREMENT,             
                     RunNumber INTEGER, 
+                    RunName TEXT NOT NULL,
                     RunDescription TEXT
                 );
 
@@ -56,6 +57,7 @@ namespace Graphics_New
                     Pk_Record INTEGER PRIMARY KEY AUTOINCREMENT, 
                     Fk_Run INTEGER,
                     RecordNumber INTEGER, 
+                    RecordName TEXT NOT NULL,
                     RecordDescription TEXT,
                     RecordData BLOB,
                     FOREIGN KEY (Fk_Run) REFERENCES Runs(Pk_Run) ON DELETE CASCADE
@@ -110,36 +112,38 @@ namespace Graphics_New
 
         }
 
-        public static long InsertRun(int runNumber, string description)
+        public static long InsertRun(int runNumber, string runName, string description)
         {
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
 
             var command = connection.CreateCommand();
             command.CommandText = @"
-            INSERT INTO Runs (RunNumber, RunDescription)
-            VALUES (@number, @desc);
+            INSERT INTO Runs (RunNumber,RunName, RunDescription)
+            VALUES (@number,@name, @desc);
             SELECT last_insert_rowid();";
 
             command.Parameters.AddWithValue("@number", runNumber);
+            command.Parameters.AddWithValue("@name", runName);
             command.Parameters.AddWithValue("@desc", description);
 
             return (long)command.ExecuteScalar(); // returns the new Pk_Run
         }
 
-        public static long InsertRecord(long fkRun, int recordNumber, string recordDescription)
+        public static long InsertRecord(long fkRun, int recordNumber, string recordName, string recordDescription)
         {
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
 
             var command = connection.CreateCommand();
             command.CommandText = @"
-            INSERT INTO Records (Fk_Run, RecordNumber, RecordDescription)
-            VALUES (@fkRun, @number, @desc);
+            INSERT INTO Records (Fk_Run, RecordNumber,RecordName, RecordDescription)
+            VALUES (@fkRun, @number,@name, @desc);
             SELECT last_insert_rowid();";
 
             command.Parameters.AddWithValue("@fkRun", fkRun);
             command.Parameters.AddWithValue("@number", recordNumber);
+            command.Parameters.AddWithValue("@name", recordName);
             command.Parameters.AddWithValue("@desc", recordDescription);
 
             return (long)command.ExecuteScalar(); // returns the new Pk_Record
@@ -296,5 +300,55 @@ namespace Graphics_New
             return result;
         }
 
+
+        public static Dictionary<int, string> GetAllRunsIdx_Name()
+        {
+            var runs = new Dictionary<int, string>();
+
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText = "SELECT RunNumber, RunName FROM Runs ORDER BY RunNumber;";
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                int runNumber = reader.GetInt32(0);
+                string description = reader.IsDBNull(1) ? "" : reader.GetString(1);
+                runs[runNumber] = description;
+            }
+
+            return runs;
+        }
+
+
+        public static Dictionary<int, string> GetAllRecordsOfRun(int runNumber)
+        {
+            var records = new Dictionary<int, string>();
+
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+            SELECT r.RecordNumber, r.RecordDescription
+            FROM Records r
+            JOIN Runs ru ON r.Fk_Run = ru.Pk_Run
+            WHERE ru.RunNumber = @runNumber
+            ORDER BY r.RecordNumber;";
+
+            command.Parameters.AddWithValue("@runNumber", runNumber);
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                int recordNumber = reader.GetInt32(0);
+                string description = reader.IsDBNull(1) ? "" : reader.GetString(1);
+                records[recordNumber] = description;
+            }
+
+            return records;
+        }
     }
 }
