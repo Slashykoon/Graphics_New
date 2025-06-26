@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ScottPlot;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -16,8 +17,16 @@ namespace Graphics_New
     {
         private System.Windows.Forms.TreeView treeView1;
         private System.Windows.Forms.TreeView treeView2;
+        TableLayoutPanel layoutRunInfo;
         Icon icoDB = new Icon("database-solid.ico");
         Icon icoSelect = new Icon("right-long-solid.ico");
+
+        System.Drawing.Image iconRun = System.Drawing.Image.FromFile("database-solid.png");
+        System.Drawing.Image iconName = System.Drawing.Image.FromFile("database-solid.png");
+        System.Drawing.Image iconDesc = System.Drawing.Image.FromFile("database-solid.png");
+        System.Drawing.Image iconStart = System.Drawing.Image.FromFile("database-solid.png");
+        System.Drawing.Image iconEnd = System.Drawing.Image.FromFile("database-solid.png");
+
         public Selection()
         {
             InitializeComponent();
@@ -31,8 +40,8 @@ namespace Graphics_New
                 //Location = new Point(10, 10),
                 //Size = new Size(360, 240),
                 Font = new Font("Roboto", 10), // Modern font
-                BackColor = Color.White,
-                ForeColor = Color.DarkSlateGray,
+                BackColor = System.Drawing.Color.White,
+                ForeColor = System.Drawing.Color.DarkSlateGray,
                 BorderStyle = BorderStyle.FixedSingle, // Clean border
                 ShowLines = true,
                 FullRowSelect = true, // Highlight full row on selection
@@ -48,8 +57,8 @@ namespace Graphics_New
                 //Location = new Point(10, 10),
                 //Size = new Size(360, 240),
                 Font = new Font("Roboto", 10), // Modern font
-                BackColor = Color.White,
-                ForeColor = Color.DarkSlateGray,
+                BackColor = System.Drawing.Color.White,
+                ForeColor = System.Drawing.Color.DarkSlateGray,
                 BorderStyle = BorderStyle.FixedSingle, // Clean border
                 ShowLines = true,
                 FullRowSelect = true, // Highlight full row on selection
@@ -58,8 +67,21 @@ namespace Graphics_New
                 Dock = DockStyle.Fill // Fill the parent container
 
             };
-            //treeView2.CheckBoxes = true;
 
+            layoutRunInfo = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 3,
+                RowCount = 5,
+                AutoSize = true,
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None,
+            };
+
+            layoutRunInfo.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 24)); // Icon column
+            layoutRunInfo.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30));  // Label
+            layoutRunInfo.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70));  // TextBox
+
+            tlp_Selection.Controls.Add(layoutRunInfo, 0, 1);
             tlp_Selection.Controls.Add(treeView1, 0, 0);
             tlp_Selection.Controls.Add(treeView2, 1, 0);
 
@@ -78,6 +100,7 @@ namespace Graphics_New
             treeView2.AfterSelect += TreeView2_AfterSelect;
             treeView2.NodeMouseHover += TreeView2_NodeMouseHover;
             treeView2.NodeMouseDoubleClick += TreeView2_NodeMouseDoubleClick;
+
         }
 
         private void SetupTreeViewIcons()
@@ -156,8 +179,35 @@ namespace Graphics_New
             recsNode.Expand();
         }
 
+        public void GetRunInfo(int SelectedRunNum)
+        {
+            long pk;
+            int runNb;
+            string name;
+            string desc;
+            layoutRunInfo.Controls.Clear();
+            (pk,runNb,name,desc)=SQLite.GetRunDetails(SelectedRunNum);
+            AddRow(0, "Run Number:", runNb.ToString(),iconRun);
+            AddRow(1, "Name:", name, iconName);
+            AddRow(2, "Description:", desc, iconDesc);
+            AddRow(3, "Start Time:", "2025-06-26 09:00", iconStart);
+            AddRow(4, "End Time:", "2025-06-26 10:30", iconEnd);
+        }
+        void AddRow(int rowIndex, string label, string text, System.Drawing.Image icon)
+        {
+            PictureBox pb = new PictureBox
+            {
+                Image = icon,
+                SizeMode = PictureBoxSizeMode.StretchImage,
+                Size = new Size(20, 20),
+                Anchor = AnchorStyles.Left
+            };
 
-
+            layoutRunInfo.Controls.Add(pb, 0, rowIndex);
+            layoutRunInfo.Controls.Add(new System.Windows.Forms.Label() { Text = label, Anchor = AnchorStyles.Left, AutoSize = true }, 1, rowIndex);
+            layoutRunInfo.Controls.Add(new System.Windows.Forms.TextBox() { Text = text, ReadOnly = true, Dock = DockStyle.Fill }, 2, rowIndex);
+        }
+        
         private void TreeView1_AfterSelect(object sender, TreeViewEventArgs e)
         {
             // Handle node selection
@@ -174,7 +224,7 @@ namespace Graphics_New
                     var value = idProperty.GetValue(tagObject);
                     if (value is int runNumber)
                     {
-                   
+                        GetRunInfo((int)value);
                         //PopulateTreeViewRecords(runNumber);
                     }
                 }
@@ -200,7 +250,6 @@ namespace Graphics_New
                     var value = idProperty.GetValue(tagObject);
                     if (value is int runNumber)
                     {
-
                         PopulateTreeViewRecords(runNumber);
                     }
                 }
@@ -222,7 +271,6 @@ namespace Graphics_New
 
             }
         }
-
         private void TreeView2_AfterSelect(object sender, TreeViewEventArgs e)
         {
             // Handle node selection
@@ -234,12 +282,11 @@ namespace Graphics_New
                 //MessageBox.Show($"Selected: {e.Node.Text} (ID: {tag.Id})");
             }
         }
-
         private void TreeView1_NodeMouseHover(object sender, TreeNodeMouseHoverEventArgs e)
         {
             // Highlight node on hover
-            e.Node.BackColor = Color.FromArgb(230, 240, 255); // Light blue highlight
-            e.Node.ForeColor = Color.Black;
+            e.Node.BackColor = System.Drawing.Color.FromArgb(230, 240, 255); // Light blue highlight
+            e.Node.ForeColor = System.Drawing.Color.Black;
 
             // Reset other nodes
             foreach (TreeNode node in treeView1.Nodes)
@@ -247,12 +294,11 @@ namespace Graphics_New
                 ResetNodeStyle(node,treeView1);
             }
         }
-
         private void TreeView2_NodeMouseHover(object sender, TreeNodeMouseHoverEventArgs e)
         {
             // Highlight node on hover
-            e.Node.BackColor = Color.FromArgb(230, 240, 255); // Light blue highlight
-            e.Node.ForeColor = Color.Black;
+            e.Node.BackColor = System.Drawing.Color.FromArgb(230, 240, 255); // Light blue highlight
+            e.Node.ForeColor = System.Drawing.Color.Black;
 
             // Reset other nodes
             foreach (TreeNode node in treeView2.Nodes)
@@ -260,19 +306,22 @@ namespace Graphics_New
                 ResetNodeStyle(node,treeView2);
             }
         }
-
         private void ResetNodeStyle(TreeNode node,System.Windows.Forms.TreeView tv)
         {
             // Reset style for non-selected nodes
             if (node != tv.SelectedNode)
             {
-                node.BackColor = Color.White;
-                node.ForeColor = Color.DarkSlateGray;
+                node.BackColor = System.Drawing.Color.White;
+                node.ForeColor = System.Drawing.Color.DarkSlateGray;
             }
             foreach (TreeNode child in node.Nodes)
             {
                 ResetNodeStyle(child, tv);
             }
         }
+
+
+
+
     }
 }

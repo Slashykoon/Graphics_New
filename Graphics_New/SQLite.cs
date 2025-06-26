@@ -350,5 +350,34 @@ namespace Graphics_New
 
             return records;
         }
+
+
+        public static (long Pk_Run, int RunNumber, string RunName, string RunDescription) GetRunDetails(int runNumber)
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+            SELECT Pk_Run, RunNumber, RunName, RunDescription
+            FROM Runs
+            WHERE RunNumber = @runNumber
+            LIMIT 1;";
+
+            command.Parameters.AddWithValue("@runNumber", runNumber);
+
+            using var reader = command.ExecuteReader();
+            if (reader.Read())
+            {
+                long pk = reader.GetInt64(0);
+                int number = reader.GetInt32(1);
+                string name = reader.IsDBNull(2) ? "" : reader.GetString(2);
+                string desc = reader.IsDBNull(3) ? "" : reader.GetString(3);
+
+                return (pk, number, name, desc);
+            }
+
+            throw new Exception($"No run found with RunNumber = {runNumber}");
+        }
     }
 }
