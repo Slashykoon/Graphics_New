@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Xml.Linq;
 
 namespace Graphics_New
 {
@@ -26,43 +28,48 @@ namespace Graphics_New
                 connection.Open();
                 var command = connection.CreateCommand();
                 command.CommandText = @"
-                PRAGMA journal_mode=WAL;
-                PRAGMA synchronous=NORMAL;
+                    PRAGMA journal_mode=WAL;
+                    PRAGMA synchronous=NORMAL;
 
-                CREATE TABLE IF NOT EXISTS Signals (
-                    Pk_Signal INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Position INTEGER,
-                    Name TEXT NOT NULL
-                );
+                    CREATE TABLE IF NOT EXISTS Signals (
+                        Pk_Signal INTEGER PRIMARY KEY AUTOINCREMENT,
+                        Position INTEGER,
+                        Name TEXT NOT NULL
+                    );
 
-                -- Runs table
-                CREATE TABLE IF NOT EXISTS Runs( 
-                    Pk_Run INTEGER PRIMARY KEY AUTOINCREMENT,             
-                    RunNumber INTEGER, 
-                    RunName TEXT NOT NULL,
-                    RunDescription TEXT
-                );
+                    -- Runs table
+                    CREATE TABLE IF NOT EXISTS Runs( 
+                        Pk_Run INTEGER PRIMARY KEY AUTOINCREMENT,             
+                        RunNumber INTEGER, 
+                        RunName TEXT NOT NULL,
+                        RunDescription TEXT,
+                        StartDateTime TEXT,
+                        EndDateTime TEXT            
+                    );
 
-                -- Join table for many-to-many relationship between Runs and Signals
-                CREATE TABLE IF NOT EXISTS RunSignals (
-                    Fk_Run INTEGER NOT NULL,
-                    Fk_Signal INTEGER NOT NULL,
-                    PRIMARY KEY (Fk_Run, Fk_Signal),
-                    FOREIGN KEY (Fk_Run) REFERENCES Runs(Pk_Run) ON DELETE CASCADE,
-                    FOREIGN KEY (Fk_Signal) REFERENCES Signals(Pk_Signal) ON DELETE CASCADE
-                );
+                    -- Join table for many-to-many relationship between Runs and Signals
+                    CREATE TABLE IF NOT EXISTS RunSignals (
+                        Fk_Run INTEGER NOT NULL,
+                        Fk_Signal INTEGER NOT NULL,
+                        PRIMARY KEY (Fk_Run, Fk_Signal),
+                        FOREIGN KEY (Fk_Run) REFERENCES Runs(Pk_Run) ON DELETE CASCADE,
+                        FOREIGN KEY (Fk_Signal) REFERENCES Signals(Pk_Signal) ON DELETE CASCADE
+                    );
 
-                -- Records table
-                CREATE TABLE IF NOT EXISTS Records( 
-                    Pk_Record INTEGER PRIMARY KEY AUTOINCREMENT, 
-                    Fk_Run INTEGER,
-                    RecordNumber INTEGER, 
-                    RecordName TEXT NOT NULL,
-                    RecordDescription TEXT,
-                    RecordData BLOB,
-                    FOREIGN KEY (Fk_Run) REFERENCES Runs(Pk_Run) ON DELETE CASCADE
-                );
-                ";
+                    -- Records table
+                    CREATE TABLE IF NOT EXISTS Records( 
+                        Pk_Record INTEGER PRIMARY KEY AUTOINCREMENT, 
+                        Fk_Run INTEGER,
+                        RecordNumber INTEGER, 
+                        RecordName TEXT NOT NULL,
+                        RecordDescription TEXT,
+                        RecordData BLOB,
+                        StartDateTime TEXT,
+                        EndDateTime TEXT,
+                        FOREIGN KEY (Fk_Run) REFERENCES Runs(Pk_Run) ON DELETE CASCADE
+                    );
+                ";  
+
 
                 command.ExecuteNonQuery();
             }
@@ -379,5 +386,46 @@ namespace Graphics_New
 
             throw new Exception($"No run found with RunNumber = {runNumber}");
         }
+        public static (long Pk_Record, int RecordNumber, string RecordName, string RecordDescription)
+        GetRecordDetails(int recordNumber, int runNumber)
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+            SELECT r.Pk_Record, r.RecordNumber, r.RecordName, r.RecordDescription
+            FROM Records r
+            JOIN Runs ru ON r.Fk_Run = ru.Pk_Run
+            WHERE r.RecordNumber = @recordNumber AND ru.RunNumber = @runNumber
+            LIMIT 1;";
+
+            command.Parameters.AddWithValue("@recordNumber", recordNumber);
+            command.Parameters.AddWithValue("@runNumber", runNumber);
+
+            using var reader = command.ExecuteReader();
+            if (reader.Read())
+            {
+                long pk = reader.GetInt64(0);
+                int number = reader.GetInt32(1);
+                string name = reader.IsDBNull(2) ? "" : reader.GetString(2);
+                string desc = reader.IsDBNull(3) ? "" : reader.GetString(3);
+
+                return (pk, number, name, desc);
+            }
+            else
+            {
+                return ((long)-1,0,"",""); // retourne -1 pour signifier qu'il n'y a rien
+            }
+
+            
+            throw new Exception("Unexpected error in GetRecordDetails.");
+        }
+
+
+
     }
+
+
+
 }

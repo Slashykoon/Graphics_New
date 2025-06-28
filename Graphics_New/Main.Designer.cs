@@ -34,12 +34,15 @@
             tlp_CurveDetails = new TableLayoutPanel();
             tlp_Information = new TableLayoutPanel();
             lbl_infos = new Label();
+            tableLayoutPanel1 = new TableLayoutPanel();
             button1 = new Button();
             timer1 = new System.Windows.Forms.Timer(components);
             notifyIcon1 = new NotifyIcon(components);
+            button2 = new Button();
             tlp_global.SuspendLayout();
             tlp_MainGraphic.SuspendLayout();
             tlp_Information.SuspendLayout();
+            tableLayoutPanel1.SuspendLayout();
             SuspendLayout();
             // 
             // tlp_global
@@ -48,7 +51,7 @@
             tlp_global.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             tlp_global.Controls.Add(tlp_MainGraphic, 0, 1);
             tlp_global.Controls.Add(tlp_Information, 0, 2);
-            tlp_global.Controls.Add(button1, 0, 0);
+            tlp_global.Controls.Add(tableLayoutPanel1, 0, 0);
             tlp_global.Dock = DockStyle.Fill;
             tlp_global.Location = new Point(0, 0);
             tlp_global.Name = "tlp_global";
@@ -112,12 +115,30 @@
             lbl_infos.TabIndex = 0;
             lbl_infos.Text = "Information";
             lbl_infos.TextAlign = ContentAlignment.MiddleLeft;
+            lbl_infos.Click += lbl_infos_Click;
+            // 
+            // tableLayoutPanel1
+            // 
+            tableLayoutPanel1.ColumnCount = 2;
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayoutPanel1.Controls.Add(button1, 0, 0);
+            tableLayoutPanel1.Controls.Add(button2, 1, 0);
+            tableLayoutPanel1.GrowStyle = TableLayoutPanelGrowStyle.AddColumns;
+            tableLayoutPanel1.Location = new Point(3, 3);
+            tableLayoutPanel1.Name = "tableLayoutPanel1";
+            tableLayoutPanel1.RowCount = 1;
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            tableLayoutPanel1.Size = new Size(400, 56);
+            tableLayoutPanel1.TabIndex = 2;
             // 
             // button1
             // 
+            button1.Dock = DockStyle.Fill;
+            button1.Font = new Font("Roboto", 10.125F, FontStyle.Regular, GraphicsUnit.Point, 0);
             button1.Location = new Point(3, 3);
             button1.Name = "button1";
-            button1.Size = new Size(128, 49);
+            button1.Size = new Size(194, 50);
             button1.TabIndex = 2;
             button1.Text = "Selection";
             button1.UseVisualStyleBackColor = true;
@@ -127,6 +148,17 @@
             // 
             notifyIcon1.Text = "notifyIcon1";
             notifyIcon1.Visible = true;
+            // 
+            // button2
+            // 
+            button2.Dock = DockStyle.Fill;
+            button2.Font = new Font("Roboto", 10.125F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            button2.Location = new Point(203, 3);
+            button2.Name = "button2";
+            button2.Size = new Size(194, 50);
+            button2.TabIndex = 3;
+            button2.Text = "Stop";
+            button2.UseVisualStyleBackColor = true;
             // 
             // Main
             // 
@@ -140,6 +172,7 @@
             tlp_MainGraphic.ResumeLayout(false);
             tlp_Information.ResumeLayout(false);
             tlp_Information.PerformLayout();
+            tableLayoutPanel1.ResumeLayout(false);
             ResumeLayout(false);
         }
 
@@ -154,5 +187,7 @@
         public TableLayoutPanel tlp_Information;
         private NotifyIcon notifyIcon1;
         private Button button1;
+        private TableLayoutPanel tableLayoutPanel1;
+        private Button button2;
     }
 }

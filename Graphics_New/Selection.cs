@@ -1,4 +1,5 @@
 ﻿using ScottPlot;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -15,17 +16,20 @@ namespace Graphics_New
 {
     public partial class Selection : Form
     {
+        public int MemSelectedRun;
         private System.Windows.Forms.TreeView treeView1;
         private System.Windows.Forms.TreeView treeView2;
         TableLayoutPanel layoutRunInfo;
+        TableLayoutPanel layoutRecInfo;
         Icon icoDB = new Icon("database-solid.ico");
         Icon icoSelect = new Icon("right-long-solid.ico");
 
         System.Drawing.Image iconRun = System.Drawing.Image.FromFile("database-solid.png");
-        System.Drawing.Image iconName = System.Drawing.Image.FromFile("database-solid.png");
-        System.Drawing.Image iconDesc = System.Drawing.Image.FromFile("database-solid.png");
-        System.Drawing.Image iconStart = System.Drawing.Image.FromFile("database-solid.png");
-        System.Drawing.Image iconEnd = System.Drawing.Image.FromFile("database-solid.png");
+        System.Drawing.Image iconName = System.Drawing.Image.FromFile("tag-solid.png");
+        System.Drawing.Image iconDesc = System.Drawing.Image.FromFile("pen-to-square-solid.png");
+        System.Drawing.Image iconStart = System.Drawing.Image.FromFile("calendar-days-solid.png");
+        System.Drawing.Image iconEnd = System.Drawing.Image.FromFile("calendar-days-solid.png");
+        System.Drawing.Image iconNoRec = System.Drawing.Image.FromFile("circle-exclamation-solid.png");
 
         public Selection()
         {
@@ -77,11 +81,27 @@ namespace Graphics_New
                 CellBorderStyle = TableLayoutPanelCellBorderStyle.None,
             };
 
+            layoutRecInfo = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 3,
+                RowCount = 5,
+                AutoSize = true,
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None,
+            };
+
             layoutRunInfo.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 24)); // Icon column
             layoutRunInfo.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30));  // Label
             layoutRunInfo.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70));  // TextBox
 
+            layoutRecInfo.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 24)); // Icon column
+            layoutRecInfo.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30));  // Label
+            layoutRecInfo.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70));  // TextBox
+
+
+
             tlp_Selection.Controls.Add(layoutRunInfo, 0, 1);
+            tlp_Selection.Controls.Add(layoutRecInfo, 1, 1);
             tlp_Selection.Controls.Add(treeView1, 0, 0);
             tlp_Selection.Controls.Add(treeView2, 1, 0);
 
@@ -157,7 +177,7 @@ namespace Graphics_New
             TreeNode recsNode = new TreeNode($"Records for Run {(runNumber.HasValue ? runNumber.Value.ToString() : "")}")
             {
                 ImageKey = "Runs",
-                SelectedImageKey = "Runs",
+                SelectedImageKey = "Selected",
                 Tag = new { Id = runNumber }  // Don't force .Value — just store nullable
             };
 
@@ -187,13 +207,37 @@ namespace Graphics_New
             string desc;
             layoutRunInfo.Controls.Clear();
             (pk,runNb,name,desc)=SQLite.GetRunDetails(SelectedRunNum);
-            AddRow(0, "Run Number:", runNb.ToString(),iconRun);
-            AddRow(1, "Name:", name, iconName);
-            AddRow(2, "Description:", desc, iconDesc);
-            AddRow(3, "Start Time:", "2025-06-26 09:00", iconStart);
-            AddRow(4, "End Time:", "2025-06-26 10:30", iconEnd);
+            AddRow(0, "Run Number:", runNb.ToString(),iconRun, layoutRunInfo);
+            AddRow(1, "Name:", name, iconName, layoutRunInfo);
+            AddRow(2, "Description:", desc, iconDesc, layoutRunInfo);
+            AddRow(3, "Start Time:", "2025-06-26 09:00", iconStart, layoutRunInfo);
+            AddRow(4, "End Time:", "2025-06-26 10:30", iconEnd, layoutRunInfo);
         }
-        void AddRow(int rowIndex, string label, string text, System.Drawing.Image icon)
+
+        public void GetRecordInfo(int SelectedRunNum,int SelectedRecNum)
+        {
+            long pk;
+            int recNb;
+            string name;
+            string desc;
+            layoutRecInfo.Controls.Clear();
+            (pk, recNb, name, desc) = SQLite.GetRecordDetails(SelectedRecNum, SelectedRunNum);
+            if (pk>=0)
+            {
+                AddRow(0, "Run Number:", recNb.ToString(), iconRun, layoutRecInfo);
+                AddRow(1, "Name:", name, iconName, layoutRecInfo);
+                AddRow(2, "Description:", desc, iconDesc, layoutRecInfo);
+                AddRow(3, "Start Time:", "2025-06-26 09:00", iconStart, layoutRecInfo);
+                AddRow(4, "End Time:", "2025-06-26 10:30", iconEnd, layoutRecInfo);
+            }
+            else
+            {
+                AddRow(0, "No Records found", "", iconNoRec, layoutRecInfo);
+            }
+
+
+        }
+        void AddRow(int rowIndex, string label, string text, System.Drawing.Image icon,TableLayoutPanel tlp_info)
         {
             PictureBox pb = new PictureBox
             {
@@ -203,9 +247,11 @@ namespace Graphics_New
                 Anchor = AnchorStyles.Left
             };
 
-            layoutRunInfo.Controls.Add(pb, 0, rowIndex);
-            layoutRunInfo.Controls.Add(new System.Windows.Forms.Label() { Text = label, Anchor = AnchorStyles.Left, AutoSize = true }, 1, rowIndex);
-            layoutRunInfo.Controls.Add(new System.Windows.Forms.TextBox() { Text = text, ReadOnly = true, Dock = DockStyle.Fill }, 2, rowIndex);
+            tlp_info.Controls.Add(pb, 0, rowIndex);
+           
+            //tlp_info.Controls.Add(new System.Windows.Forms.Label() { Text = label, TextAlign = ContentAlignment.MiddleLeft, Dock = DockStyle.Fill }, 1, rowIndex);
+            tlp_info.Controls.Add(new System.Windows.Forms.Label() { Text = label, Anchor=AnchorStyles.Left | AnchorStyles.Right, AutoSize = true}, 1, rowIndex);
+            tlp_info.Controls.Add(new System.Windows.Forms.TextBox() { Text = text, ReadOnly = true, Anchor = AnchorStyles.Left | AnchorStyles.Right }, 2, rowIndex);
         }
         
         private void TreeView1_AfterSelect(object sender, TreeViewEventArgs e)
@@ -224,8 +270,9 @@ namespace Graphics_New
                     var value = idProperty.GetValue(tagObject);
                     if (value is int runNumber)
                     {
+                        MemSelectedRun = runNumber; // Store the selected run number
                         GetRunInfo((int)value);
-                        //PopulateTreeViewRecords(runNumber);
+                      
                     }
                 }
             }
@@ -250,6 +297,7 @@ namespace Graphics_New
                     var value = idProperty.GetValue(tagObject);
                     if (value is int runNumber)
                     {
+                        MemSelectedRun = runNumber; // Store the selected run number
                         PopulateTreeViewRecords(runNumber);
                     }
                 }
@@ -264,22 +312,44 @@ namespace Graphics_New
                 ResetNodeStyle(node, treeView2);
             }
             // Handle node selection
-            if (e.Node.Tag != null)
+            if (e.Node?.Tag != null)
             {
-                dynamic tag = e.Node.Tag;
-                e.Node.SelectedImageKey = "Selected"; // Change selected image key
+                // Extract the ID from the Tag object
+                var tagObject = e.Node.Tag;
+                var tagType = tagObject.GetType();
 
+                // Use reflection to get the "Id" property (since it’s an anonymous type)
+                var idProperty = tagType.GetProperty("Id");
+                if (idProperty != null)
+                {
+                    var value = idProperty.GetValue(tagObject);
+                    if (value is int runNumber)
+                    {
+                        //GetRecordInfo(MemSelectedRun, (int)value);
+
+                    }
+                }
             }
         }
         private void TreeView2_AfterSelect(object sender, TreeViewEventArgs e)
         {
             // Handle node selection
-            if (e.Node.Tag != null)
+            if (e.Node?.Tag != null)
             {
-                dynamic tag = e.Node.Tag;
-                //add ico selected
-                //e.Node.ImageKey = "Selected";
-                //MessageBox.Show($"Selected: {e.Node.Text} (ID: {tag.Id})");
+                // Extract the ID from the Tag object
+                var tagObject = e.Node.Tag;
+                var tagType = tagObject.GetType();
+
+                // Use reflection to get the "Id" property (since it’s an anonymous type)
+                var idProperty = tagType.GetProperty("Id");
+                if (idProperty != null)
+                {
+                    var value = idProperty.GetValue(tagObject);
+                    if (value is int runNumber)
+                    {
+                        GetRecordInfo(MemSelectedRun, (int)value);
+                    }
+                }
             }
         }
         private void TreeView1_NodeMouseHover(object sender, TreeNodeMouseHoverEventArgs e)

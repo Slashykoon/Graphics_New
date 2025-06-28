@@ -23,9 +23,45 @@ namespace Graphics_New
         Curve_Manager Cvm;
 
         System.Windows.Forms.Label LabelInfo_CurrRunRec;
+
         public Main()
         {
+            this.Shown += Main_Shown;
             InitializeComponent();
+
+            /*var vl = formsPlot1.Plot.Add.VerticalLine(2);
+            vl.IsDraggable = true;
+            vl.Text = "???";
+
+            var hl = formsPlot1.Plot.Add.HorizontalLine(2);
+            hl.IsDraggable = true;
+            hl.Text = "???";*/
+            // use events for custom mouse interactivity
+            /*formsPlot1.MouseDown += FormsPlot1_MouseDown;
+            formsPlot1.MouseUp += FormsPlot1_MouseUp;
+            formsPlot1.MouseMove += FormsPlot1_MouseMove;*/
+
+        }
+
+        private async void Main_Shown(object sender, EventArgs e)
+        {
+            // Lancement des opérations longues
+            await Task.Delay(1); // juste pour revenir au message loop
+
+            Data.PropertyChanged += (sender, e) =>
+            {
+                if (lbl_infos.InvokeRequired)
+                {
+                    lbl_infos.BeginInvoke((System.Windows.Forms.MethodInvoker)(() => HandlePropertyChange(sender, e)));
+                }
+                else
+                {
+                    HandlePropertyChange(sender, e);
+                }
+            };
+
+
+            Cvm = new Curve_Manager();
             this.Icon = new Icon("growth-curve.ico");
             NotifyIcon trayIcon = new NotifyIcon
             {
@@ -44,7 +80,7 @@ namespace Graphics_New
 
             Data.AddNewRun();
             var plc = new PLCInterface();
-            Cvm = new Curve_Manager();
+
             if (!plc.StartReadingLoop())
                 return;
 
@@ -66,28 +102,10 @@ namespace Graphics_New
 
             };
 
-            Data.PropertyChanged += (sender, e) =>
-            {
-                // Ensure the call is made on the UI thread
-                if (lbl_infos.InvokeRequired)
-                {
-                    Data.PropertyChanged += (sender, e) =>
-                    {
-                        // Vérifier si l'appel doit être marshalé sur le thread UI
-                        if (lbl_infos.InvokeRequired)
-                        {
-                            lbl_infos.BeginInvoke((System.Windows.Forms.MethodInvoker)delegate
-                            {
-                                HandlePropertyChange(sender, e);
-                            });
-                            return;
-                        }
-                        HandlePropertyChange(sender, e);
-                    };
-                };
 
-
-            };
+            // Appliquer les valeurs initiales à l’UI
+            HandlePropertyChange(null, new PropertyChangedEventArgs(nameof(Data.CurrentRun)));
+            HandlePropertyChange(null, new PropertyChangedEventArgs(nameof(Data.CurrentRecord)));
 
             Cvm.AttachFormPlot(tlp_MainGraphic);
 
@@ -96,24 +114,6 @@ namespace Graphics_New
             Cvm.StartRefreshPlot();
 
             tlp_Information.Controls.Add(LabelInfo_CurrRunRec, 1, 0);
-
-            //tlp_CurveDetails.Controls.Add(CurveDetail_Instance, 0, tlp_CurveDetails.RowCount - 1);
-
-
-            /*var vl = formsPlot1.Plot.Add.VerticalLine(2);
-            vl.IsDraggable = true;
-            vl.Text = "???";
-
-            var hl = formsPlot1.Plot.Add.HorizontalLine(2);
-            hl.IsDraggable = true;
-            hl.Text = "???";*/
-
-
-            // use events for custom mouse interactivity
-            /*formsPlot1.MouseDown += FormsPlot1_MouseDown;
-            formsPlot1.MouseUp += FormsPlot1_MouseUp;
-            formsPlot1.MouseMove += FormsPlot1_MouseMove;*/
-
         }
 
         public void HandlePropertyChange(object sender, PropertyChangedEventArgs e)
@@ -141,6 +141,11 @@ namespace Graphics_New
         {
             Selection selectionForm = new Selection();
             selectionForm.ShowDialog();
+        }
+
+        private void lbl_infos_Click(object sender, EventArgs e)
+        {
+
         }
 
 

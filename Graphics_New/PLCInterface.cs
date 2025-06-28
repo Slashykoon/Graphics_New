@@ -17,7 +17,12 @@ namespace Graphics_New
         NewReference = 4,
         Stopped = 16
     }
-
+    enum ParserState
+    {
+        WaitingForNewRecord,
+        Recording,
+        Stopped
+    }
     public class GraphicsDB
     {
 
@@ -71,6 +76,8 @@ namespace Graphics_New
         public int lastIdxofArrayCopied = 0;
         public bool bRecordData = false;
         private int lastNewRecordIndex = -1;
+        private int lastNewCollectIndex = -1;
+        private int lastStopped = -1;
         string exeDirectory;
         string filePath;
 
@@ -85,9 +92,13 @@ namespace Graphics_New
                 }
             }
         }
-        private bool bdebug = true;
+ 
 
         public GraphicsDB GraphicsDB { get; private set; }
+
+        private ParserState currentState = ParserState.WaitingForNewRecord;
+        private int lastProcessedIndex = -1;
+        private int lastEventIndex = 1;
 
         public bool StartReadingLoop(string ip = "192.168.0.1", int rack = 0, int slot = 1)
         {
@@ -228,12 +239,25 @@ namespace Graphics_New
             }
             Tools.LogToFile("write index plc : "+ db.iWRITEINDEX);
 
-            for (int i = 1; i <= db.kMaxValueIndex; i++)
+            //Check code function 
+            if(db.iWRITEINDEX <=1)
+            {
+                lastEventIndex = 1;
+            }
+            for (int i = lastEventIndex; i <= db.kMaxValueIndex; i++)
             {
                 byte[] bytes = BitConverter.GetBytes(db.ValuesDint[((i - 1) * (db.kCurrentSignalNb+1))]);
-                //Tools.LogToFile("Bytes de code fonction : " + bytes[3] + " " + bytes[2] + " " + bytes[1] + " "  + bytes[0] );
-                CheckCode(bytes,i);
+                Tools.LogToFile("Bytes de code fonction : " + bytes[3] + " " + bytes[2] + " " + bytes[1] + " " + bytes[0]);
+                if (CheckCode(bytes,i))
+                {
+                    lastEventIndex = i+1;
+                    if(lastEventIndex > db.kMaxValueIndex)
+                    {
+                        lastEventIndex = 1;
+                    }
+                }
             }
+
             if (bRecordData)
             {
                 //recopie des dernières données à jour du buffer
@@ -379,33 +403,75 @@ namespace Graphics_New
 
 
 
-        public void CheckCode(byte[] b,int idx)
+        public bool CheckCode(byte[] b, int idx)
         {
-            if ((b[0] & (byte)PLCBufferCode.NewRecord) != 0 && idx != lastNewRecordIndex)
+            byte code = b[0];
+            bool EventOccured = false;
+            switch (currentState)
             {
-                Tools.LogToFile("*** Nouveau record ! *** " + idx.ToString());
-                lastNewRecordIndex = idx; // Mark this index as processed
+                case ParserState.WaitingForNewRecord:
+                    if ((code & (byte)PLCBufferCode.NewRecord) != 0 && idx != lastNewRecordIndex)
+                    {
+                        Tools.LogToFile("*** Nouveau record ! *** " + idx + " " + currentState.ToString());
+                        lastNewRecordIndex = idx;
+                        EventOccured = true;
+                        db.ArrByteFormatted.Clear();
+                        Curr_idx = 0;
+                        bRecordData = true;
+                        NewRecordTriggered = true;
 
-                db.ArrByteFormatted.Clear();
-                Curr_idx = 0;
+                        currentState = ParserState.Recording;
+                    }
+                    break;
 
-                bRecordData = true;
-                NewRecordTriggered = true;
-                
+                case ParserState.Recording:
+                    if ((code & (byte)PLCBufferCode.NewCollector) != 0 && idx != lastNewCollectIndex)
+                    {
+                        Tools.LogToFile("*** Nouvelle collection ! *** " + currentState.ToString());
+                        lastNewCollectIndex = idx;
+                        EventOccured = true;
+                    }
+                    else if ((code & (byte)PLCBufferCode.NewReference) != 0 && idx != lastProcessedIndex)
+                    {
+                        Tools.LogToFile("*** Nouvelle reference !  *** " + currentState.ToString());
+                        lastProcessedIndex = idx;
+                        EventOccured = true;
+                    }
+                    else if ((code & (byte)PLCBufferCode.Stopped) != 0 && idx != lastStopped)
+                    {
+                        Tools.LogToFile("*** Stoppé ! *** " + currentState.ToString());
+                        lastStopped = idx;
+                        EventOccured = true;
+                        currentState = ParserState.Stopped;
+                    }
+                    else if ((code & (byte)PLCBufferCode.NewRecord) != 0 && idx != lastStopped)
+                    {
+                        Tools.LogToFile("*** Stoppé ! *** " + currentState.ToString());
+                        lastStopped = idx;
+                        EventOccured = true;
+                        currentState = ParserState.Stopped;
+                    }
+                    break;
+
+                case ParserState.Stopped:
+                    if ((code & (byte)PLCBufferCode.NewRecord) != 0 && idx != lastNewRecordIndex)
+                    {
+                        Tools.LogToFile("*** Nouveau record ! *** " + idx + " "+currentState.ToString());
+                        lastNewRecordIndex = idx;
+                        EventOccured = true;
+                        db.ArrByteFormatted.Clear();
+                        Curr_idx = 0;
+                        bRecordData = true;
+                        NewRecordTriggered = true;
+
+                        currentState = ParserState.Recording;
+                    }
+                    // Ignore everything else
+                    break;
             }
 
-            if ((b[0] & (byte)PLCBufferCode.NewCollector) != 0)
-            {
-                Tools.LogToFile("*** Nouvelle collection ! *** ");
-            }
-            if ((b[0] & (byte)PLCBufferCode.NewReference) != 0)
-            {
-                Tools.LogToFile("*** Nouvelle reference ! *** ");
-            }
-            if ((b[0] & (byte)PLCBufferCode.Stopped) != 0)
-            {
-                Tools.LogToFile("*** Stoppé ! *** ");
-            }
+            return EventOccured;
+
         }
         public void LogValues(List<float> _tmp)
         {
