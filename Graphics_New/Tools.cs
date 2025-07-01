@@ -30,5 +30,12 @@ namespace Graphics_New
                 Console.WriteLine($"Error writing to log file: {ex.Message}");
             }
         }
+
+
+        public static string GetBinaryFilePath(int runNumber, int recordNumber)
+        {
+            string exeDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            return Path.Combine(exeDirectory, $"datas_run{runNumber}_record{recordNumber}.bin");
+        }
     }
 }

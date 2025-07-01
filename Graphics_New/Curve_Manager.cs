@@ -194,25 +194,40 @@ namespace Graphics_New
         {
             while (isRunning)
             {
+                var localPlot = formsPlot; // copie thread-safe
 
-                    // Use Invoke to update UI on the correct threa
-                    if (formsPlot.InvokeRequired)
+                if (localPlot == null)
+                    break;
+
+                if (localPlot.InvokeRequired)
+                {
+                    try
                     {
-                        formsPlot.Invoke((MethodInvoker)delegate
+                        localPlot.Invoke((MethodInvoker)delegate
                         {
                             lock (plotLock)
                             {
-                                if (formsPlot != null)
-                                    formsPlot.Refresh();
+                                localPlot.Refresh();
                             }
                         });
                     }
-                    else
+                    catch (ObjectDisposedException) { break; }
+                    catch (InvalidOperationException) { break; }
+                }
+                else
+                {
+                    try
                     {
-                        formsPlot.Refresh();
+                        lock (plotLock)
+                        {
+                            localPlot.Refresh();
+                        }
                     }
-           
-                Thread.Sleep(300);
+                    catch (ObjectDisposedException) { break; }
+                    catch (InvalidOperationException) { break; }
+                }
+
+                Thread.Sleep(200);
             }
         }
 

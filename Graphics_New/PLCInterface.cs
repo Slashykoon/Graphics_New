@@ -196,12 +196,12 @@ namespace Graphics_New
             return ParseGraphicsDB(buffer);
         }
 
-        private GraphicsDB ParseGraphicsDB(byte[] buffer)
+         GraphicsDB ParseGraphicsDB(byte[] buffer)
         {
             // Get the directory where the executable is located
-            exeDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            //exeDirectory = AppDomain.CurrentDomain.BaseDirectory;
             // Combine the executable directory with the log file name
-            filePath = Path.Combine(exeDirectory, "datas.bin");
+            //filePath = Path.Combine(exeDirectory, "datas.bin");
 
 
 
@@ -278,7 +278,7 @@ namespace Graphics_New
                         db.ArrByteFormatted.Add(Curr_idx, tmp);
                         Curr_idx++;
 
-                        AppendToBinaryFile(filePath, db.ArrByteFormatted);
+                        AppendToBinaryFile(Data.CurrentRun, Data.CurrentRecord, db.ArrByteFormatted);
                         AppendPLCDataToSignals(); //test
                     }
                     Old_idx = db.iWRITEINDEX;
@@ -301,7 +301,7 @@ namespace Graphics_New
                         Curr_idx++;
 
 
-                        AppendToBinaryFile(filePath, db.ArrByteFormatted);
+                        AppendToBinaryFile(Data.CurrentRun, Data.CurrentRecord, db.ArrByteFormatted);
                         AppendPLCDataToSignals(); //test
                     }
                     Old_idx = 0; // voir si mieux possible recup autre donnee
@@ -360,26 +360,34 @@ namespace Graphics_New
         }
 
 
-        void AppendToBinaryFile(string path, Dictionary<int, List<Single>> newData)
-        {
-            using var fs = new FileStream(path, FileMode.Append, FileAccess.Write);
-            using var writer = new BinaryWriter(fs);
-            int curr_key;
-            curr_key = newData.Keys.Max();
-            writer.Write(curr_key);     // Écrit la clé
-            writer.Write(newData[curr_key].Count);      // Écrit le nombre de floats
 
+
+        void AppendToBinaryFile(int runNumber, int recordNumber, Dictionary<int, List<Single>> newData)
+        {
+            string filePath = Tools.GetBinaryFilePath(runNumber, recordNumber);
+            using var fs = new FileStream(filePath, FileMode.Append, FileAccess.Write);
+            using var writer = new BinaryWriter(fs);
+            int curr_key = newData.Keys.Max();
+            writer.Write(curr_key); // Write the key
+            writer.Write(newData[curr_key].Count); // Write the number of floats
             foreach (var val in newData[curr_key])
             {
-                writer.Write(val);           // Écrit les floats
+                writer.Write(val); // Write the floats
             }
         }
 
-        Dictionary<int, List<Single>> ReadFromBinaryFile(string path)
+        Dictionary<int, List<Single>> ReadFromBinaryFile(int runNumber, int recordNumber)
         {
+            string filePath = Tools.GetBinaryFilePath(runNumber, recordNumber);
             var result = new Dictionary<int, List<Single>>();
 
-            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
+            if (!File.Exists(filePath))
+            {
+                Tools.LogToFile($"Binary file {filePath} does not exist.");
+                return result;
+            }
+
+            using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read);
             using var reader = new BinaryReader(fs);
 
             while (fs.Position < fs.Length)
@@ -412,14 +420,14 @@ namespace Graphics_New
                 case ParserState.WaitingForNewRecord:
                     if ((code & (byte)PLCBufferCode.NewRecord) != 0 && idx != lastNewRecordIndex)
                     {
-                        Tools.LogToFile("*** Nouveau record ! *** " + idx + " " + currentState.ToString());
+                        Tools.LogToFile("*** Nouveau record de démarrage! *** " + idx + " " + currentState.ToString());
                         lastNewRecordIndex = idx;
                         EventOccured = true;
                         db.ArrByteFormatted.Clear();
                         Curr_idx = 0;
+                        lastIdxofArrayCopied = 0; // Reset last copied index
                         bRecordData = true;
                         NewRecordTriggered = true;
-
                         currentState = ParserState.Recording;
                     }
                     break;
@@ -443,13 +451,20 @@ namespace Graphics_New
                         lastStopped = idx;
                         EventOccured = true;
                         currentState = ParserState.Stopped;
+                        bRecordData = false;
                     }
-                    else if ((code & (byte)PLCBufferCode.NewRecord) != 0 && idx != lastStopped)
+                    else if ((code & (byte)PLCBufferCode.NewRecord) != 0 && idx != lastNewRecordIndex)
                     {
-                        Tools.LogToFile("*** Stoppé ! *** " + currentState.ToString());
-                        lastStopped = idx;
+                        Tools.LogToFile("*** Nouveau Record suite ! *** " + currentState.ToString());
+                        lastNewRecordIndex = idx;
                         EventOccured = true;
-                        currentState = ParserState.Stopped;
+                        db.ArrByteFormatted.Clear();
+                        Curr_idx = 0;
+                        lastIdxofArrayCopied = 0; // Reset last copied index
+                        bRecordData = true;
+                        NewRecordTriggered = true;
+                        currentState = ParserState.Recording;
+                        //Dictionary<int, List<Single>> ReadedDict = ReadFromBinaryFile(filePath);
                     }
                     break;
 
@@ -461,9 +476,10 @@ namespace Graphics_New
                         EventOccured = true;
                         db.ArrByteFormatted.Clear();
                         Curr_idx = 0;
+                        lastIdxofArrayCopied = 0; // Reset last copied index
                         bRecordData = true;
                         NewRecordTriggered = true;
-
+                        //Dictionary<int, List<Single>> ReadedDict = ReadFromBinaryFile(filePath);
                         currentState = ParserState.Recording;
                     }
                     // Ignore everything else

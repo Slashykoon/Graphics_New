@@ -330,16 +330,16 @@ namespace Graphics_New
         }
 
 
-        public static Dictionary<int, string> GetAllRecordsOfRun(int runNumber)
+        public static Dictionary<int, (int,string)> GetAllRecordsOfRun(int runNumber)
         {
-            var records = new Dictionary<int, string>();
+            var records = new Dictionary<int,(int,string)>();
 
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
 
             var command = connection.CreateCommand();
             command.CommandText = @"
-            SELECT r.RecordNumber, r.RecordDescription
+            SELECT r.RecordNumber, r.RecordDescription,r.pk_Record
             FROM Records r
             JOIN Runs ru ON r.Fk_Run = ru.Pk_Run
             WHERE ru.RunNumber = @runNumber
@@ -352,7 +352,10 @@ namespace Graphics_New
             {
                 int recordNumber = reader.GetInt32(0);
                 string description = reader.IsDBNull(1) ? "" : reader.GetString(1);
-                records[recordNumber] = description;
+                int recpk = reader.GetInt32(2);
+                records[recordNumber] = (recpk, description);
+                //records[recordNumber].Item2 = description;
+               
             }
 
             return records;
@@ -386,8 +389,7 @@ namespace Graphics_New
 
             throw new Exception($"No run found with RunNumber = {runNumber}");
         }
-        public static (long Pk_Record, int RecordNumber, string RecordName, string RecordDescription)
-        GetRecordDetails(int recordNumber, int runNumber)
+        public static (long Pk_Record, int RecordNumber, string RecordName, string RecordDescription) GetRecordDetails(int recordNumber, int runNumber)
         {
             using var connection = new SqliteConnection(connectionString);
             connection.Open();

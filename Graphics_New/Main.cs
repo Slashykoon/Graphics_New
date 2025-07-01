@@ -27,6 +27,9 @@ namespace Graphics_New
         public Main()
         {
             this.Shown += Main_Shown;
+    
+            this.TopMost = true;
+            
             InitializeComponent();
 
             /*var vl = formsPlot1.Plot.Add.VerticalLine(2);
@@ -47,6 +50,8 @@ namespace Graphics_New
         {
             // Lancement des opérations longues
             await Task.Delay(1); // juste pour revenir au message loop
+
+            //var dic = SQLite.ReadRecordDataFromSQLite(65);
 
             Data.PropertyChanged += (sender, e) =>
             {
@@ -86,9 +91,10 @@ namespace Graphics_New
 
             plc.OnNewRecord += () =>
             {
-                if (Data.CurrentRecord > 1)
+                if (Data.CurrentRecord > 0)
                 {
-                    SQLite.UpdateRecordDataInSQLite(Data.dRuns[Data.CurrentRun].dRecords[Data.CurrentRecord - 1].Pk_Record, Data.BinSaveFilePath);
+                    SQLite.UpdateRecordDataInSQLite(Data.dRuns[Data.CurrentRun].dRecords[Data.CurrentRecord].Pk_Record, Tools.GetBinaryFilePath(Data.CurrentRun, Data.CurrentRecord));
+                   
 
                     // var tmp = SQLite.ReadRecordDataFromSQLite(153);
 

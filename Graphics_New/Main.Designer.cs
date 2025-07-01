@@ -36,9 +36,9 @@
             lbl_infos = new Label();
             tableLayoutPanel1 = new TableLayoutPanel();
             button1 = new Button();
+            button2 = new Button();
             timer1 = new System.Windows.Forms.Timer(components);
             notifyIcon1 = new NotifyIcon(components);
-            button2 = new Button();
             tlp_global.SuspendLayout();
             tlp_MainGraphic.SuspendLayout();
             tlp_Information.SuspendLayout();
@@ -144,11 +144,6 @@
             button1.UseVisualStyleBackColor = true;
             button1.Click += button1_Click;
             // 
-            // notifyIcon1
-            // 
-            notifyIcon1.Text = "notifyIcon1";
-            notifyIcon1.Visible = true;
-            // 
             // button2
             // 
             button2.Dock = DockStyle.Fill;
@@ -159,6 +154,11 @@
             button2.TabIndex = 3;
             button2.Text = "Stop";
             button2.UseVisualStyleBackColor = true;
+            // 
+            // notifyIcon1
+            // 
+            notifyIcon1.Text = "notifyIcon1";
+            notifyIcon1.Visible = true;
             // 
             // Main
             // 

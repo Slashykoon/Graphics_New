@@ -36,7 +36,7 @@ namespace Graphics_New
             InitializeComponent();
             // Initialize form
             this.Text = "Selection of saved Runs/Records";
-            
+            this.TopMost = true; // Keep the form on top
 
             // Initialize TreeView
             treeView1 = new System.Windows.Forms.TreeView
@@ -183,13 +183,13 @@ namespace Graphics_New
 
             if (runNumber.HasValue)
             {
-                var records = SQLite.GetAllRecordsOfRun(runNumber.Value); // Safe, we already checked HasValue
+                var records= SQLite.GetAllRecordsOfRun(runNumber.Value); // Safe, we already checked HasValue
 
                 foreach (var kvp in records)
                 {
-                    TreeNode recNode = new TreeNode($"Record {kvp.Key} - {kvp.Value}")
+                    TreeNode recNode = new TreeNode($"Record {kvp.Key} - {kvp.Value.Item2}")
                     {
-                        Tag = new { Id = kvp.Key }
+                        Tag = new { Id = kvp.Value.Item1 }
                     };
                     recsNode.Nodes.Add(recNode);
                 }
@@ -326,7 +326,8 @@ namespace Graphics_New
                     if (value is int runNumber)
                     {
                         //GetRecordInfo(MemSelectedRun, (int)value);
-
+                        Dictionary<int,List<float>> LoadedRecDict = new Dictionary<int,List<float>>();
+                        LoadedRecDict=SQLite.ReadRecordDataFromSQLite((int)value);    
                     }
                 }
             }
