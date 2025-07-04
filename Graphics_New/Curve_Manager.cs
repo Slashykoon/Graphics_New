@@ -84,16 +84,19 @@ namespace Graphics_New
             // disable interactivity by default
             formsPlot.UserInputProcessor.Disable();
         }
-       public void AttachCurves()
+       public void RecordToCurves(int? RunNb = null, int? RecNb = null)
         {
-            foreach (Signal sig in Data.GetRecord(Data.CurrentRun, Data.CurrentRecord).GetSignals())
+            int runNumber = RunNb ?? Data.CurrentRun;
+            int recNumber = RecNb ?? Data.CurrentRecord;
+
+            foreach (Signal sig in Data.GetRecord(runNumber, recNumber).GetSignals())
             {
-               sig.CurveLogger= formsPlot.Plot.Add.DataLogger();
+                sig.CurveLogger = formsPlot.Plot.Add.DataLogger();
             }
             Configure_Axes();
  
         }
-        public void Construct_Axes()
+       /* public void Construct_Axes()
         {
 
             foreach (Signal sig in Data.GetRecord(Data.CurrentRun, Data.CurrentRecord).GetSignals())
@@ -103,7 +106,7 @@ namespace Graphics_New
                 sig.YAxis.IsVisible = true;
 
             }
-        }
+        }*/
 
 
         public void Configure_Axes()
@@ -240,7 +243,7 @@ namespace Graphics_New
             }
         }
 
-        public void RefreshCurveSelector(TableLayoutPanel tlp_CurveDetails)
+        public void GenerateCurveDetails(TableLayoutPanel tlp_CurveDetails , int? RunNb = null, int? RecNb = null)
         {
             lock (tlpLock)
             {
@@ -252,7 +255,10 @@ namespace Graphics_New
                         tlp_CurveDetails.RowStyles.Clear();
                         tlp_CurveDetails.RowCount = 0;
 
-                        foreach (Signal sig in Data.GetRecord(Data.CurrentRun, Data.CurrentRecord).GetSignals())
+                        int runNumber = RunNb ?? Data.CurrentRun;
+                        int recNumber = RecNb ?? Data.CurrentRecord;
+
+                        foreach (Signal sig in Data.GetRecord(runNumber, recNumber).GetSignals())
                         {
                             FillCurveDetails(sig.Name, sig.GetFormatColor(), tlp_CurveDetails);
                         }

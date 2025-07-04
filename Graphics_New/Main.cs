@@ -26,11 +26,12 @@ namespace Graphics_New
 
         public Main()
         {
-            this.Shown += Main_Shown;
+
     
             this.TopMost = true;
             
             InitializeComponent();
+            this.Shown += Main_Shown;
 
             /*var vl = formsPlot1.Plot.Add.VerticalLine(2);
             vl.IsDraggable = true;
@@ -49,9 +50,7 @@ namespace Graphics_New
         private async void Main_Shown(object sender, EventArgs e)
         {
             // Lancement des opérations longues
-            await Task.Delay(1); // juste pour revenir au message loop
-
-            //var dic = SQLite.ReadRecordDataFromSQLite(65);
+            //await Task.Delay(1000); // juste pour revenir au message loop
 
             Data.PropertyChanged += (sender, e) =>
             {
@@ -83,7 +82,11 @@ namespace Graphics_New
                 Visible = true // Ensure the label is visible
             };
 
+
+
+
             Data.AddNewRun();
+            //Data.AddNewRun(64);
             var plc = new PLCInterface();
 
             if (!plc.StartReadingLoop())
@@ -94,20 +97,14 @@ namespace Graphics_New
                 if (Data.CurrentRecord > 0)
                 {
                     SQLite.UpdateRecordDataInSQLite(Data.dRuns[Data.CurrentRun].dRecords[Data.CurrentRecord].Pk_Record, Tools.GetBinaryFilePath(Data.CurrentRun, Data.CurrentRecord));
-                   
-
-                    // var tmp = SQLite.ReadRecordDataFromSQLite(153);
-
-                    //plc.AppendAllPLCDataToSignals(tmp,
                 }
 
                 plc.NewRecordTriggered = !Data.dRuns[Data.CurrentRun].AttachNewRecord();
-                Cvm.RefreshCurveSelector(tlp_CurveDetails);
-                Cvm.AttachCurves();
+                Cvm.GenerateCurveDetails(tlp_CurveDetails);
+                Cvm.RecordToCurves();
 
 
             };
-
 
             // Appliquer les valeurs initiales à l’UI
             HandlePropertyChange(null, new PropertyChangedEventArgs(nameof(Data.CurrentRun)));
@@ -120,6 +117,15 @@ namespace Graphics_New
             Cvm.StartRefreshPlot();
 
             tlp_Information.Controls.Add(LabelInfo_CurrRunRec, 1, 0);
+
+
+            /*var tmp = SQLite.ReadRecordDataFromSQLite(64);
+            Data.dRuns[64].AttachNewRecord(1);
+            plc.AppendAllPLCDataToSignals(tmp, 64, 1);
+            Cvm.RefreshCurveSelector(tlp_CurveDetails);
+            Cvm.RecordToCurves(64, 1);*/
+           
+
         }
 
         public void HandlePropertyChange(object sender, PropertyChangedEventArgs e)

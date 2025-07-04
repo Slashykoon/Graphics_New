@@ -141,7 +141,7 @@ namespace Graphics_New
 
         private void ReadLoop()
         {
-            Tools.LogToFile("ReadLoop started on thread: " + Thread.CurrentThread.ManagedThreadId);
+            Tools.LogToFile("ReadLoop started on thread ");
             while (isRunning)
             {
                 try
@@ -154,7 +154,7 @@ namespace Graphics_New
                             GraphicsDB = db;
                         }
                     }
-                    Tools.LogToFile("Cyclic reading done on thread: " + Thread.CurrentThread.ManagedThreadId);
+                    Tools.LogToFile("Cyclic reading done on thread: ");
                 }
                 catch (Exception ex)
                 {
@@ -247,7 +247,7 @@ namespace Graphics_New
             for (int i = lastEventIndex; i <= db.kMaxValueIndex; i++)
             {
                 byte[] bytes = BitConverter.GetBytes(db.ValuesDint[((i - 1) * (db.kCurrentSignalNb+1))]);
-                Tools.LogToFile("Bytes de code fonction : " + bytes[3] + " " + bytes[2] + " " + bytes[1] + " " + bytes[0]);
+                //Tools.LogToFile("Bytes de code fonction : " + bytes[3] + " " + bytes[2] + " " + bytes[1] + " " + bytes[0]);
                 if (CheckCode(bytes,i))
                 {
                     lastEventIndex = i+1;
@@ -263,7 +263,6 @@ namespace Graphics_New
                 //recopie des dernières données à jour du buffer
                 if (Old_idx < db.iWRITEINDEX)
                 {
-                    //Tools.LogToFile("Add from " + Old_idx + " to " + db.iWRITEINDEX);
                     for (int i = Old_idx+1; i <= db.iWRITEINDEX; i++)
                     {
                         List<Single> tmp = new List<Single>();
@@ -273,13 +272,13 @@ namespace Graphics_New
                             tmp.Add(db.Values[(i + (i - 1) * db.kCurrentSignalNb) + j]);
                         }
 
-                        //LogValues(tmp);
+                        LogValues(tmp);
 
                         db.ArrByteFormatted.Add(Curr_idx, tmp);
                         Curr_idx++;
 
                         AppendToBinaryFile(Data.CurrentRun, Data.CurrentRecord, db.ArrByteFormatted);
-                        AppendPLCDataToSignals(); //test
+                        AppendPLCDataToSignals(); 
                     }
                     Old_idx = db.iWRITEINDEX;
                 }
@@ -295,18 +294,17 @@ namespace Graphics_New
                             tmp.Add(db.Values[(i + (i - 1) * db.kCurrentSignalNb) + j]);
                         }
 
-                        //LogValues(tmp);
+                        LogValues(tmp);
 
                         db.ArrByteFormatted.Add(Curr_idx, tmp);
                         Curr_idx++;
 
 
                         AppendToBinaryFile(Data.CurrentRun, Data.CurrentRecord, db.ArrByteFormatted);
-                        AppendPLCDataToSignals(); //test
+                        AppendPLCDataToSignals(); 
                     }
                     Old_idx = 0; // voir si mieux possible recup autre donnee
                 }
-                //Dictionary<int, List<Single>> ReadedDict = ReadFromBinaryFile(filePath);
             }
             return db;
         }
@@ -326,9 +324,7 @@ namespace Graphics_New
                 for (int j = 0; j < signals.Count; j++)
                 {
                     Signal s = signals[j];
-                    
-                    //s.YPoints.Add(newValues[j]);
-                    //s.XPoints.Add((i*500.0f)/1000.0f);
+                  
                     s.CurveLogger.Add((i * 500.0f) / 1000.0f, newValues[j]);
                 }
             }
