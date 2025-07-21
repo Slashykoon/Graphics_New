@@ -11,19 +11,13 @@ namespace Graphics_New
     public static class Data
     {
         private static int _currentRun = 0;
+        private static int _lastloadedRun = 0;
+        private static int _lastloadedRec = 0;
         private static int _currentRecord = 0;
         public static Dictionary<int, Run> dRuns = new Dictionary<int, Run>();
-
-        public static string BinSaveFilePath
-        {
-            get => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "datas.bin");
-            set
-            {
-            }
-        }
         
         // Define the event for property changes
-        public static event EventHandler<PropertyChangedEventArgs> PropertyChanged;
+        public static event EventHandler<PropertyChangedEventArgs> ?PropertyChanged;
 
         // Properties with change notification
         public static int CurrentRun
@@ -43,6 +37,25 @@ namespace Graphics_New
             {
                 _currentRecord = value;
                 OnPropertyChanged(nameof(CurrentRecord));
+            }
+        }
+        public static int LastLoadedRun
+        {
+            get => _lastloadedRun;
+            set
+            {
+                _lastloadedRun = value;
+                OnPropertyChanged(nameof(LastLoadedRun));
+            }
+        }
+
+        public static int LastLoadedRecord
+        {
+            get => _lastloadedRec;
+            set
+            {
+                _lastloadedRec = value;
+                OnPropertyChanged(nameof(LastLoadedRecord));
             }
         }
 
@@ -84,6 +97,7 @@ namespace Graphics_New
                 {
                     RuntoAdd.RunNumber = index.Value;
                     dRuns[index.Value] = RuntoAdd;
+                    LastLoadedRecord = index.Value;
                 }
             }
             else // Un numéro n'est pas donné, on devine qu'on fait de l'acquisition
@@ -91,11 +105,8 @@ namespace Graphics_New
                 CurrentRun = RuntoAdd.RunNumber;
                 dRuns[CurrentRun] = RuntoAdd;
             }
+            Tools.LogToFile("AddNewRun");
         }
-
-        //todo : LoadRunRec(RunNumber,RecNumber) : function load data of run and record in druns
-
-
 
 
     }

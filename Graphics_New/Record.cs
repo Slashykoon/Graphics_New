@@ -34,6 +34,7 @@ namespace Graphics_New
             {
                 XML_Manager.LoadSignalsConf(this);
                 RecordNumber = RecNumLoad.Value;
+
             }
 
             if (RunNumAttached.HasValue)

@@ -5,8 +5,13 @@ using System.Threading;
 using System.Xml;
 using OpenTK.Graphics.OpenGL;
 using ScottPlot.Colormaps;
+using ScottPlot.WinForms;
 using Snap7;
+using static ScottPlot.Generate;
+using static System.Windows.Forms.AxHost;
 using static SkiaSharp.HarfBuzz.SKShaper;
+using ScottPlot;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
 
 namespace Graphics_New
 {
@@ -64,7 +69,7 @@ namespace Graphics_New
 
     public class PLCInterface
     {
-        private S7Client client = new S7Client();
+        private static S7Client client = new S7Client();
         private Thread readThread;
         private GraphicsDB db = new GraphicsDB();
         private bool isRunning = false;
@@ -92,39 +97,64 @@ namespace Graphics_New
                 }
             }
         }
- 
 
         public GraphicsDB GraphicsDB { get; private set; }
 
         private ParserState currentState = ParserState.WaitingForNewRecord;
         private int lastProcessedIndex = -1;
         private int lastEventIndex = 1;
+        private System.Threading.Timer timer;
 
-        public bool StartReadingLoop(string ip = "192.168.0.1", int rack = 0, int slot = 1)
+        public PLCInterface()
         {
-            int result = client.ConnectTo(ip, rack, slot);
+            timer = new System.Threading.Timer(
+                                                callback: ConnectionToPLC,
+                                                state: null,
+                                                dueTime: Timeout.Infinite,  // do NOT start immediately
+                                                period: Timeout.Infinite    // do NOT repeat until started
+                                            );
+            StartTimerConnection();
 
-            short Timeout = 5000;
+    
+        }
 
-            client.SetParam(S7Consts.p_i32_RecvTimeout, ref Timeout);
+        public void ConnectionToPLC(object state)
+        {
+            Tools.LogToFile("Trying connection to PLC");
+            int result = client.ConnectTo("192.168.0.1", 0, 1);
 
             if (result != 0)
             {
                 Tools.LogToFile("Connection failed: " + client.ErrorText(result));
-                return false;
             }
-
-
-            isRunning = true;
-            readThread = new Thread(ReadLoop)
+            else
             {
-                IsBackground = true,
-                Name = "PLCReadThread" // Name for easier identification
-            };
-            readThread.Start();
-            Tools.LogToFile("Thread PLC read started on thread: " + readThread.ManagedThreadId);
-            return true;
+                short Timeout = 5000;
+                client.SetParam(S7Consts.p_i32_RecvTimeout, ref Timeout);
+                Tools.LogToFile("Connection OK");
+                StopTimerConnection();
+                isRunning = true;
+                readThread = new Thread(ReadLoop)
+                {
+                    IsBackground = true,
+                    Name = "PLCReadThread" // Name for easier identification
+                };
+                readThread.Start();
+                Tools.LogToFile("Thread PLC read loop started");
+
+            }
         }
+
+        public  void StopTimerConnection()
+        {
+            timer?.Change(Timeout.Infinite, Timeout.Infinite); // Stop the timer
+            //timer?.Dispose();
+        }
+        public  void StartTimerConnection()
+        {
+            timer.Change(0, 2000);  // Restart immediately, tick every 1000 ms
+        }
+
 
         public void StopReadingLoop()
         {
@@ -154,7 +184,7 @@ namespace Graphics_New
                             GraphicsDB = db;
                         }
                     }
-                    Tools.LogToFile("Cyclic reading done on thread: ");
+                    //Tools.LogToFile("Cyclic reading done on thread: ");
                 }
                 catch (Exception ex)
                 {
@@ -247,7 +277,7 @@ namespace Graphics_New
             for (int i = lastEventIndex; i <= db.kMaxValueIndex; i++)
             {
                 byte[] bytes = BitConverter.GetBytes(db.ValuesDint[((i - 1) * (db.kCurrentSignalNb+1))]);
-                //Tools.LogToFile("Bytes de code fonction : " + bytes[3] + " " + bytes[2] + " " + bytes[1] + " " + bytes[0]);
+                Tools.LogToFile("Bytes de code fonction ("+ lastEventIndex.ToString()+ ") : " + bytes[3] + " " + bytes[2] + " " + bytes[1] + " " + bytes[0]);
                 if (CheckCode(bytes,i))
                 {
                     lastEventIndex = i+1;
@@ -352,7 +382,7 @@ namespace Graphics_New
                     s.CurveLogger.Add((i * 500.0f) / 1000.0f, newValues[j]);
                 }
             }
-           
+            Tools.LogToFile("AppendAllPLCDataToSignals");
         }
 
 

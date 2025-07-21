@@ -18,25 +18,23 @@ namespace Graphics_New
 {
     public class Curve_Manager
     {
-        private bool isRunning = false;
-        private Thread refreshThread;
-        private object plotLock = new object();
-        private object tlpLock = new object();
+        private  bool isRunning = false;
+        private  Thread refreshThread;
+        private  object plotLock = new object();
+        private  object tlpLock = new object();
 
 
         // Create FormsPlot
         ScottPlot.WinForms.FormsPlot formsPlot = new ScottPlot.WinForms.FormsPlot
         {
-            Dock = DockStyle.Fill
-
+            Dock = DockStyle.Fill,
+            Padding=new Padding(20, 20, 20, 20)
         };
 
         //AxisManager axisManager;
         public Curve_Manager()
         {
             InitFormPlot();
-            // Get the AxisManager instance from ScottPlot  
-            //var axisManager = formsPlot.Plot.Axes;
         }
         private void CurveDetail_CurveColorChanged(object sender, CurveCheckedEventArgs e)
         {
@@ -64,20 +62,6 @@ namespace Graphics_New
                     }
                 }
             }
-
-            /*foreach (Signal sig in Data.GetRecord(Data.CurrentRun, Data.CurrentRecord).GetSignals())
-            {
-                if (sig.Name == e.CurveName)
-                {
-                    sig.CurveLogger.IsVisible = e.IsChecked;
-                    if (sig.CurveLogger.Axes.YAxis != null)
-                    {
-                        sig.CurveLogger.Axes.YAxis.IsVisible = e.IsChecked;
-                    }
-                }
-            }*/
-                    // Perform action when checked (e.g., enable plotting)
-                    // MessageBox.Show($"Curve {e.CurveName} is now checked with color {e.CurveColor}");
         }
         public void InitFormPlot()
         {
@@ -94,19 +78,9 @@ namespace Graphics_New
                 sig.CurveLogger = formsPlot.Plot.Add.DataLogger();
             }
             Configure_Axes();
- 
+            Tools.LogToFile("RecordToCurves");
         }
-       /* public void Construct_Axes()
-        {
 
-            foreach (Signal sig in Data.GetRecord(Data.CurrentRun, Data.CurrentRecord).GetSignals())
-            {
-                sig.YAxis.Label.Text = sig.Name;
-                sig.YAxis.Label.ForeColor = sig.Convert_SysColToScottCol(sig.Col);
-                sig.YAxis.IsVisible = true;
-
-            }
-        }*/
 
 
         public void Configure_Axes()
@@ -115,16 +89,20 @@ namespace Graphics_New
             {
                 var plot = formsPlot.Plot;
                 var axisManager = plot.Axes;
-                bool GroupByUnit = false;
+ 
                 // Optional: Clear existing custom axes
                 foreach (var axis in axisManager.GetYAxes().ToList())
                     axisManager.Remove(axis);
+                foreach (var axis in axisManager.GetXAxes().ToList())
+                    axisManager.Remove(axis);
+
+                BottomAxis xAxis = axisManager.AddBottomAxis(); // Ensure X axis is added if not already present
+                xAxis.LabelText = "Time (s)"; // Set X axis label
+                xAxis.LabelOffsetY = 9; // Adjust label position if needed
 
                 // Group signals
                 Dictionary<string, IYAxis> sharedAxes = new();
               
-
-                //var signals = Data.GetRecord(Data.CurrentRun, Data.CurrentRecord).GetSignals();
                 foreach (Run run in Data.dRuns.Values)
                 {
                     foreach (Record rec in run.dRecords.Values)
@@ -142,7 +120,6 @@ namespace Graphics_New
                                 yAxis.Label.Text = sig.Name + "(" + sig.Unit + ")";
                                 //yAxis.Label.ForeColor = sig.Convert_SysColToScottCol(sig.Col);
                                 yAxis.IsVisible = true;
-
                                 sharedAxes[sig.Unit] = yAxis;
                             }
 
@@ -153,7 +130,8 @@ namespace Graphics_New
                     }
                 }
                 axisManager.AutoScaleExpand();
-                
+                Tools.LogToFile("Configure_Axes");
+
             }
         }
 
@@ -181,6 +159,7 @@ namespace Graphics_New
         public void AttachFormPlot(TableLayoutPanel tlp_MainGraphics)
         {
             tlp_MainGraphics.Controls.Add(formsPlot, 0, 0);
+            Tools.LogToFile("AttachFormPlot");
         }
 
 
@@ -192,6 +171,7 @@ namespace Graphics_New
                 IsBackground = true
             };
             refreshThread.Start();
+            Tools.LogToFile("StartRefreshPlot");
         }
         private void RefreshPlotLoop()
         {
@@ -237,13 +217,14 @@ namespace Graphics_New
         public void CloseThread()
         {
             isRunning = false;
+            Tools.LogToFile("CloseThread (plot)");
             if (refreshThread != null && refreshThread.IsAlive)
             {
                 //refreshThread.Join();
             }
         }
 
-        public void GenerateCurveDetails(TableLayoutPanel tlp_CurveDetails , int? RunNb = null, int? RecNb = null)
+        public void GenerateCurveDetails(TableLayoutPanel tlp_CurveDetails, int? RunNb = null, int? RecNb = null)
         {
             lock (tlpLock)
             {
@@ -251,23 +232,33 @@ namespace Graphics_New
                 {
                     tlp_CurveDetails.Invoke((MethodInvoker)delegate
                     {
-                        tlp_CurveDetails.Controls.Clear();
-                        tlp_CurveDetails.RowStyles.Clear();
-                        tlp_CurveDetails.RowCount = 0;
-
-                        int runNumber = RunNb ?? Data.CurrentRun;
-                        int recNumber = RecNb ?? Data.CurrentRecord;
-
-                        foreach (Signal sig in Data.GetRecord(runNumber, recNumber).GetSignals())
-                        {
-                            FillCurveDetails(sig.Name, sig.GetFormatColor(), tlp_CurveDetails);
-                        }
-
+                        UpdateCurveDetails(tlp_CurveDetails, RunNb, RecNb);
                     });
                 }
+                else
+                {
+                    // Si on est déjà sur le thread UI : exécuter directement
+                    UpdateCurveDetails(tlp_CurveDetails, RunNb, RecNb);
+                }
+                Tools.LogToFile("GenerateCurveDetails");
             }
         }
 
+        private void UpdateCurveDetails(TableLayoutPanel tlp_CurveDetails, int? RunNb, int? RecNb)
+        {
+            tlp_CurveDetails.Controls.Clear();
+            tlp_CurveDetails.RowStyles.Clear();
+            tlp_CurveDetails.RowCount = 0;
+
+            int runNumber = RunNb ?? Data.CurrentRun;
+            int recNumber = RecNb ?? Data.CurrentRecord;
+
+            foreach (Signal sig in Data.GetRecord(runNumber, recNumber).GetSignals())
+            {
+                FillCurveDetails(sig.Name, sig.GetFormatColor(), tlp_CurveDetails);
+            }
+            Tools.LogToFile("UpdateCurveDetails");
+        }
 
         public void FillCurveDetails(string CurveName, System.Drawing.Color col, TableLayoutPanel tlp_CurveDetails)
         {
@@ -287,6 +278,8 @@ namespace Graphics_New
 
             CurveDetail_Instance.CurveCheckedChanged += CurveDetail_CurveCheckedChanged;
             CurveDetail_Instance.CurveColorChanged += CurveDetail_CurveColorChanged;
+
+            Tools.LogToFile("FillCurveDetails");
         }
 
     }

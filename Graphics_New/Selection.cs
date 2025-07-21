@@ -31,6 +31,11 @@ namespace Graphics_New
         System.Drawing.Image iconEnd = System.Drawing.Image.FromFile("calendar-days-solid.png");
         System.Drawing.Image iconNoRec = System.Drawing.Image.FromFile("circle-exclamation-solid.png");
 
+        // public delegate void SelectedEventHandler(object sender, string result);
+        // Définir l'événement
+        // public event SelectedEventHandler SelectToLoad;
+        public event EventHandler<(int _RunNum, int _RecNum, Dictionary<int, List<float>> _DictLoaded)> ResultReady;
+
         public Selection()
         {
             InitializeComponent();
@@ -139,6 +144,11 @@ namespace Graphics_New
             treeView1.ImageList = imageList;
             treeView2.ImageList = imageList;
         }
+        public void SendResultSelected(int _RunNum, int _RecNum, Dictionary<int, List<float>> _DictLoaded)
+        {
+            var result = (_RunNum, _RecNum, _DictLoaded);
+            ResultReady?.Invoke(this, result);
+        }
 
         private void PopulateTreeViewRuns()
         {
@@ -199,6 +209,8 @@ namespace Graphics_New
             recsNode.Expand();
         }
 
+
+
         public void GetRunInfo(int SelectedRunNum)
         {
             long pk;
@@ -224,7 +236,7 @@ namespace Graphics_New
             (pk, recNb, name, desc) = SQLite.GetRecordDetails(SelectedRecNum, SelectedRunNum);
             if (pk>=0)
             {
-                AddRow(0, "Run Number:", recNb.ToString(), iconRun, layoutRecInfo);
+                AddRow(0, "Record Number:", recNb.ToString(), iconRun, layoutRecInfo);
                 AddRow(1, "Name:", name, iconName, layoutRecInfo);
                 AddRow(2, "Description:", desc, iconDesc, layoutRecInfo);
                 AddRow(3, "Start Time:", "2025-06-26 09:00", iconStart, layoutRecInfo);
@@ -327,11 +339,19 @@ namespace Graphics_New
                     {
                         //GetRecordInfo(MemSelectedRun, (int)value);
                         Dictionary<int,List<float>> LoadedRecDict = new Dictionary<int,List<float>>();
-                        LoadedRecDict=SQLite.ReadRecordDataFromSQLite((int)value);    
+                        LoadedRecDict=SQLite.ReadRecordDataFromSQLite((int)value);
+
+                        //var tmp = SQLite.ReadRecordDataFromSQLite(64);
+                        SendResultSelected(MemSelectedRun, (int)value, LoadedRecDict);
+
                     }
                 }
             }
         }
+
+
+
+
         private void TreeView2_AfterSelect(object sender, TreeViewEventArgs e)
         {
             // Handle node selection

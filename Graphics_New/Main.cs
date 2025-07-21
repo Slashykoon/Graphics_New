@@ -1,5 +1,6 @@
 using ScottPlot;
 using ScottPlot.AxisPanels;
+using ScottPlot.Colormaps;
 using ScottPlot.Plottables;
 using Snap7;
 using System.ComponentModel;
@@ -11,6 +12,7 @@ using System.Windows.Forms;
 using System.Xml.Linq;
 using static OpenTK.Graphics.OpenGL.GL;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using static System.Windows.Forms.DataFormats;
 
 
 
@@ -21,6 +23,7 @@ namespace Graphics_New
 
         PLCInterface plc;
         Curve_Manager Cvm;
+        Selection selectionForm;
 
         System.Windows.Forms.Label LabelInfo_CurrRunRec;
 
@@ -81,19 +84,16 @@ namespace Graphics_New
                 Font = new Font("Roboto", 10), // Set font and size
                 Visible = true // Ensure the label is visible
             };
+            tlp_Information.Controls.Add(LabelInfo_CurrRunRec, 1, 0);
+            //Data.AddNewRun();
+            plc = new PLCInterface();
 
 
-
-
-            Data.AddNewRun();
-            //Data.AddNewRun(64);
-            var plc = new PLCInterface();
-
-            if (!plc.StartReadingLoop())
-                return;
+          
 
             plc.OnNewRecord += () =>
             {
+                Data.AddNewRun();
                 if (Data.CurrentRecord > 0)
                 {
                     SQLite.UpdateRecordDataInSQLite(Data.dRuns[Data.CurrentRun].dRecords[Data.CurrentRecord].Pk_Record, Tools.GetBinaryFilePath(Data.CurrentRun, Data.CurrentRecord));
@@ -102,8 +102,6 @@ namespace Graphics_New
                 plc.NewRecordTriggered = !Data.dRuns[Data.CurrentRun].AttachNewRecord();
                 Cvm.GenerateCurveDetails(tlp_CurveDetails);
                 Cvm.RecordToCurves();
-
-
             };
 
             // Appliquer les valeurs initiales à l’UI
@@ -111,20 +109,10 @@ namespace Graphics_New
             HandlePropertyChange(null, new PropertyChangedEventArgs(nameof(Data.CurrentRecord)));
 
             Cvm.AttachFormPlot(tlp_MainGraphic);
-
-            //Cvm.AttachCurves();
-
             Cvm.StartRefreshPlot();
 
-            tlp_Information.Controls.Add(LabelInfo_CurrRunRec, 1, 0);
+            
 
-
-            /*var tmp = SQLite.ReadRecordDataFromSQLite(64);
-            Data.dRuns[64].AttachNewRecord(1);
-            plc.AppendAllPLCDataToSignals(tmp, 64, 1);
-            Cvm.RefreshCurveSelector(tlp_CurveDetails);
-            Cvm.RecordToCurves(64, 1);*/
-           
 
         }
 
@@ -132,14 +120,37 @@ namespace Graphics_New
         {
             if (e.PropertyName == nameof(Data.CurrentRun))
             {
-                lbl_infos.Text = $"Current Run changed to {Data.CurrentRun}";
+                if (Data.CurrentRun <= 0)
+                {
+                    //lbl_infos.Text = "No Run loaded or launched";
+                    LabelInfo_CurrRunRec.Text = "No Run launched";
 
-                LabelInfo_CurrRunRec.Text = $"Running Run {Data.CurrentRun} Record {Data.CurrentRecord}";
+                }
+                else
+                {
+                    lbl_infos.Text = $"Current Run changed to {Data.CurrentRun}";
+
+                    LabelInfo_CurrRunRec.Text = $"Running Run {Data.CurrentRun} Record {Data.CurrentRecord}";
+                }
+
             }
             else if (e.PropertyName == nameof(Data.CurrentRecord))
             {
-                lbl_infos.Text = $"Current Record changed to {Data.CurrentRecord}";
-                LabelInfo_CurrRunRec.Text = $"Running Run {Data.CurrentRun} Record {Data.CurrentRecord}";
+                if (Data.CurrentRecord <= 0)
+                {
+                    //LabelInfo_CurrRunRec.Text = "No Run launched";
+                }
+                else
+                {
+                    lbl_infos.Text = $"Current Record changed to {Data.CurrentRecord}";
+                    LabelInfo_CurrRunRec.Text = $"Running Run {Data.CurrentRun} Record {Data.CurrentRecord}";
+                }
+            }
+            else if (e.PropertyName == nameof(Data.LastLoadedRun))
+            {
+                //LabelInfo_CurrRunRec.Text = "No Run loaded or launched";
+                lbl_infos.Text = $"Loaded Run {Data.LastLoadedRun} and  Record {Data.LastLoadedRecord} successfull";
+
             }
         }
 
@@ -151,8 +162,23 @@ namespace Graphics_New
 
         private void button1_Click(object sender, EventArgs e)
         {
-            Selection selectionForm = new Selection();
+            selectionForm = new Selection();
+            selectionForm.ResultReady += (s, data) =>
+            {
+                // Data.AddNewRun(data._RunNum);
+                // Data.dRuns[data._RunNum].AttachNewRecord(data._RecNum);
+
+                plc.AppendAllPLCDataToSignals(data._DictLoaded, data._RunNum, data._RecNum);
+                Cvm.GenerateCurveDetails(tlp_CurveDetails, data._RunNum, data._RecNum);
+                Cvm.RecordToCurves(data._RunNum, data._RecNum);
+                
+
+            };
             selectionForm.ShowDialog();
+        }
+        private void selectionForm_SelectedToLoad(object sender, string result)
+        {
+
         }
 
         private void lbl_infos_Click(object sender, EventArgs e)
