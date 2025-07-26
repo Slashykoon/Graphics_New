@@ -199,7 +199,8 @@ namespace Graphics_New
                 {
                     TreeNode recNode = new TreeNode($"Record {kvp.Key} - {kvp.Value.Item2}")
                     {
-                        Tag = new { Id = kvp.Value.Item1 }
+                        //Tag = new { Id = kvp.Value.Item1 }
+                        Tag = new { Id = kvp.Key }
                     };
                     recsNode.Nodes.Add(recNode);
                 }
@@ -339,8 +340,9 @@ namespace Graphics_New
                     {
                         //GetRecordInfo(MemSelectedRun, (int)value);
                         Dictionary<int,List<float>> LoadedRecDict = new Dictionary<int,List<float>>();
-                        LoadedRecDict=SQLite.ReadRecordDataFromSQLite((int)value);
-
+                        var pkrec = SQLite.GetRecordPk(MemSelectedRun, (int)value);
+                        LoadedRecDict =SQLite.ReadRecordDataFromSQLite(pkrec);
+                        
                         //var tmp = SQLite.ReadRecordDataFromSQLite(64);
                         SendResultSelected(MemSelectedRun, (int)value, LoadedRecDict);
 

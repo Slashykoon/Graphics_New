@@ -87,21 +87,22 @@ namespace Graphics_New
             return dRuns[run].dRecords[rec];
         }
 
-        public static void AddNewRun(int? index = null) //todo differencier si c'est un run chargé ou en cours
+        public static void AddNewRun(int? index = null) 
         {
-            Run RuntoAdd = new Run();
+            
             if (index.HasValue) // Un numéro est donné, on devine qu'on charge un dataset 
             {
-                
+                Run RuntoAdd = new Run(true);
                 if (!dRuns.ContainsKey(index.Value))
                 {
                     RuntoAdd.RunNumber = index.Value;
                     dRuns[index.Value] = RuntoAdd;
-                    LastLoadedRecord = index.Value;
+                    _lastloadedRun = index.Value;
                 }
             }
             else // Un numéro n'est pas donné, on devine qu'on fait de l'acquisition
             {
+                Run RuntoAdd = new Run();
                 CurrentRun = RuntoAdd.RunNumber;
                 dRuns[CurrentRun] = RuntoAdd;
             }

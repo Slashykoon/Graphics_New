@@ -12,6 +12,7 @@ using static System.Windows.Forms.AxHost;
 using static SkiaSharp.HarfBuzz.SKShaper;
 using ScottPlot;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
+using static OpenTK.Graphics.OpenGL.GL;
 
 namespace Graphics_New
 {
@@ -359,33 +360,9 @@ namespace Graphics_New
                 }
             }
             lastIdxofArrayCopied = newCount;
+
+            
         }
-
-        public void AppendAllPLCDataToSignals(Dictionary<int, List<Single>> dictAllDataLoaded,int RunLoaded, int RecLoaded)
-        {
-            if (dictAllDataLoaded.Count == 0)
-                return;
-            Data.AddNewRun(RunLoaded);
-            Data.dRuns[RunLoaded].AttachNewRecord(RecLoaded);
-            List<Signal> signals = Data.GetSignals(RunLoaded, RecLoaded);
-            int newCount = dictAllDataLoaded.Count;
-
-            for (int i = 0; i < newCount; i++)
-            {
-                List<Single> newValues = dictAllDataLoaded[i];
-                for (int j = 0; j < signals.Count; j++)
-                {
-                    Signal s = signals[j];
-
-                    //s.YPoints.Add(newValues[j]);
-                    //s.XPoints.Add((i*500.0f)/1000.0f);
-                    s.CurveLogger.Add((i * 500.0f) / 1000.0f, newValues[j]);
-                }
-            }
-            Tools.LogToFile("AppendAllPLCDataToSignals");
-        }
-
-
 
 
         void AppendToBinaryFile(int runNumber, int recordNumber, Dictionary<int, List<Single>> newData)
@@ -471,14 +448,14 @@ namespace Graphics_New
                         lastProcessedIndex = idx;
                         EventOccured = true;
                     }
-                    else if ((code & (byte)PLCBufferCode.Stopped) != 0 && idx != lastStopped)
+                    /*else if ((code & (byte)PLCBufferCode.Stopped) != 0 && idx != lastStopped)
                     {
                         Tools.LogToFile("*** Stoppé ! *** " + currentState.ToString());
                         lastStopped = idx;
                         EventOccured = true;
                         currentState = ParserState.Stopped;
                         bRecordData = false;
-                    }
+                    }*/
                     else if ((code & (byte)PLCBufferCode.NewRecord) != 0 && idx != lastNewRecordIndex)
                     {
                         Tools.LogToFile("*** Nouveau Record suite ! *** " + currentState.ToString());

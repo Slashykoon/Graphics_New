@@ -389,6 +389,27 @@ namespace Graphics_New
 
             throw new Exception($"No run found with RunNumber = {runNumber}");
         }
+
+        public static long GetRecordPk(int runNumber, int recordNumber)
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+            SELECT r.Pk_Record
+            FROM Records r
+            JOIN Runs ru ON r.Fk_Run = ru.Pk_Run
+            WHERE ru.RunNumber = @runNumber AND r.RecordNumber = @recordNumber
+            LIMIT 1;";
+
+            command.Parameters.AddWithValue("@runNumber", runNumber);
+            command.Parameters.AddWithValue("@recordNumber", recordNumber);
+
+            var result = command.ExecuteScalar();
+            return result != null ? (long)result : -1; // Returns -1 if no record is found
+        }
+
         public static (long Pk_Record, int RecordNumber, string RecordName, string RecordDescription) GetRecordDetails(int recordNumber, int runNumber)
         {
             using var connection = new SqliteConnection(connectionString);

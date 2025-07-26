@@ -13,15 +13,15 @@ namespace Graphics_New
     public class Curve 
     {
         public DataLogger CurveLogger { get; set; }
-
+        public ScottPlot.Plot CurveLoaded { get; set; } 
+        
         public ScottPlot.IYAxis YAxis;
         //public Boolean IsSelected = false;
         public Curve()
         {
             CurveLogger = new DataLogger();
+            CurveLoaded = new ScottPlot.Plot();
             //CurveLogger.ViewSlide(100);
-            //CurveLogger.ViewJump(100);
-           
         }
 
      

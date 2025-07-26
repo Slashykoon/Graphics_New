@@ -16,7 +16,7 @@ namespace Graphics_New
         public Dictionary<int, Record> dRecords { get; set; }
 
         public int RunNumber = 0;
-
+        public bool IsLoaded { get; set; }
         public bool AttachNewRecord(int? index = null)
         {
             try
@@ -40,11 +40,15 @@ namespace Graphics_New
 
         }
 
-        public Run()
+        public Run(bool? IsLoaded=false)
         {
             dRecords = new Dictionary<int, Record>();
-            RunNumber = SQLite.GetLastRunNumber() + 1;
-            SQLite.InsertRun(RunNumber,"No title", "No description set");
+            if(!IsLoaded.Value)
+            {
+                RunNumber = SQLite.GetLastRunNumber() + 1;
+                SQLite.InsertRun(RunNumber, "No title", "No description set");
+            }
+
             
         }
     }

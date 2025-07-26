@@ -38,8 +38,16 @@ namespace Graphics_New
         }
         private void CurveDetail_CurveColorChanged(object sender, CurveCheckedEventArgs e)
         {
-            Signal s = Data.GetSignalByName(Data.CurrentRun, Data.CurrentRecord, e.CurveName);
-            s.CurveLogger.Color=s.Convert_SysColToScottCol(e.CurveColor);
+            foreach (Run run in Data.dRuns.Values)
+            {
+                foreach (Record rec in run.dRecords.Values)
+                {
+                    //Signal s = Data.GetSignalByName(Data.CurrentRun, Data.CurrentRecord, e.CurveName);
+                    Signal s = Data.GetSignalByName(run.RunNumber, rec.RecordNumber, e.CurveName);
+                    s.CurveLogger.Color = s.Convert_SysColToScottCol(e.CurveColor);
+                }
+            }
+
         }
         private void CurveDetail_CurveCheckedChanged(object sender, CurveCheckedEventArgs e)
         {
@@ -68,22 +76,52 @@ namespace Graphics_New
             // disable interactivity by default
             formsPlot.UserInputProcessor.Disable();
         }
-       public void RecordToCurves(int? RunNb = null, int? RecNb = null)
+
+    public void RecordToCurves(int? RunNb = null, int? RecNb = null)
         {
             int runNumber = RunNb ?? Data.CurrentRun;
             int recNumber = RecNb ?? Data.CurrentRecord;
-
+            
             foreach (Signal sig in Data.GetRecord(runNumber, recNumber).GetSignals())
             {
                 sig.CurveLogger = formsPlot.Plot.Add.DataLogger();
             }
             Configure_Axes();
+
             Tools.LogToFile("RecordToCurves");
+
+            /*formsPlot.Invoke((MethodInvoker)delegate
+            {
+                formsPlot.Refresh();
+            });*/
         }
 
+        public void AppendAllPLCDataToSignals(Dictionary<int, List<Single>> dictAllDataLoaded, int RunLoaded, int RecLoaded)
+        {
+            if (dictAllDataLoaded.Count == 0)
+                return;
+            Data.AddNewRun(RunLoaded);
+            Data.dRuns[RunLoaded].AttachNewRecord(RecLoaded);
+            RecordToCurves(RunLoaded, RecLoaded);
+            List<Signal> signals = Data.GetSignals(RunLoaded, RecLoaded);
+            int newCount = dictAllDataLoaded.Count;
 
+            for (int i = 0; i < newCount; i++)
+            {
+                List<Single> newValues = dictAllDataLoaded[i];
+                for (int j = 0; j < signals.Count; j++)
+                {
+                    Signal s = signals[j];
+                    //s.YPoints.Add(newValues[j]);
+                    //s.XPoints.Add((i*500.0f)/1000.0f);
+                    s.CurveLogger.Add((i * 500.0f) / 1000.0f, newValues[j]);
 
-        public void Configure_Axes()
+                }
+            }
+            Tools.LogToFile("AppendAllPLCDataToSignals");
+        }
+
+        public void Configure_Axes(bool? IsDataLoad=false)
         {
             lock (formsPlot.Plot.Sync)
             {
@@ -97,6 +135,7 @@ namespace Graphics_New
                     axisManager.Remove(axis);
 
                 BottomAxis xAxis = axisManager.AddBottomAxis(); // Ensure X axis is added if not already present
+
                 xAxis.LabelText = "Time (s)"; // Set X axis label
                 xAxis.LabelOffsetY = 9; // Adjust label position if needed
 
@@ -126,6 +165,7 @@ namespace Graphics_New
                             // Reuse axis for this signal
                             sig.YAxis = sharedAxes[sig.Unit];
                             sig.CurveLogger.Axes.YAxis = sig.YAxis;
+
                         }
                     }
                 }

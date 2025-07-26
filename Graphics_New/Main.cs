@@ -67,7 +67,6 @@ namespace Graphics_New
                 }
             };
 
-
             Cvm = new Curve_Manager();
             this.Icon = new Icon("growth-curve.ico");
             NotifyIcon trayIcon = new NotifyIcon
@@ -84,12 +83,10 @@ namespace Graphics_New
                 Font = new Font("Roboto", 10), // Set font and size
                 Visible = true // Ensure the label is visible
             };
+
             tlp_Information.Controls.Add(LabelInfo_CurrRunRec, 1, 0);
-            //Data.AddNewRun();
+
             plc = new PLCInterface();
-
-
-          
 
             plc.OnNewRecord += () =>
             {
@@ -98,7 +95,6 @@ namespace Graphics_New
                 {
                     SQLite.UpdateRecordDataInSQLite(Data.dRuns[Data.CurrentRun].dRecords[Data.CurrentRecord].Pk_Record, Tools.GetBinaryFilePath(Data.CurrentRun, Data.CurrentRecord));
                 }
-
                 plc.NewRecordTriggered = !Data.dRuns[Data.CurrentRun].AttachNewRecord();
                 Cvm.GenerateCurveDetails(tlp_CurveDetails);
                 Cvm.RecordToCurves();
@@ -112,24 +108,24 @@ namespace Graphics_New
             Cvm.StartRefreshPlot();
 
             
-
-
+            /*Cvm.AppendAllPLCDataToSignals(SQLite.ReadRecordDataFromSQLite(6), 2,1);
+            Cvm.GenerateCurveDetails(tlp_CurveDetails, 2, 1);*/
+            
         }
 
         public void HandlePropertyChange(object sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(Data.CurrentRun))
+            if (e.PropertyName == nameof(Data.CurrentRun))
             {
                 if (Data.CurrentRun <= 0)
                 {
-                    //lbl_infos.Text = "No Run loaded or launched";
                     LabelInfo_CurrRunRec.Text = "No Run launched";
 
                 }
                 else
                 {
                     lbl_infos.Text = $"Current Run changed to {Data.CurrentRun}";
-
                     LabelInfo_CurrRunRec.Text = $"Running Run {Data.CurrentRun} Record {Data.CurrentRecord}";
                 }
 
@@ -138,7 +134,7 @@ namespace Graphics_New
             {
                 if (Data.CurrentRecord <= 0)
                 {
-                    //LabelInfo_CurrRunRec.Text = "No Run launched";
+                    //rien
                 }
                 else
                 {
@@ -148,16 +144,13 @@ namespace Graphics_New
             }
             else if (e.PropertyName == nameof(Data.LastLoadedRun))
             {
-                //LabelInfo_CurrRunRec.Text = "No Run loaded or launched";
                 lbl_infos.Text = $"Loaded Run {Data.LastLoadedRun} and  Record {Data.LastLoadedRecord} successfull";
-
             }
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             Cvm.CloseThread();
-            //plc.StopReadingLoop();
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -165,17 +158,12 @@ namespace Graphics_New
             selectionForm = new Selection();
             selectionForm.ResultReady += (s, data) =>
             {
-                // Data.AddNewRun(data._RunNum);
-                // Data.dRuns[data._RunNum].AttachNewRecord(data._RecNum);
-
-                plc.AppendAllPLCDataToSignals(data._DictLoaded, data._RunNum, data._RecNum);
+                Cvm.AppendAllPLCDataToSignals(data._DictLoaded, data._RunNum, data._RecNum);
                 Cvm.GenerateCurveDetails(tlp_CurveDetails, data._RunNum, data._RecNum);
-                Cvm.RecordToCurves(data._RunNum, data._RecNum);
-                
-
             };
             selectionForm.ShowDialog();
         }
+
         private void selectionForm_SelectedToLoad(object sender, string result)
         {
 
